@@ -1,0 +1,320 @@
+-- public.admins_id_seq definition
+-- DROP SEQUENCE public.admins_id_seq;
+
+create sequence public.admins_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.appeared_questions_id_seq definition
+-- DROP SEQUENCE public.appeared_questions_id_seq;
+
+create sequence public.appeared_questions_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.attempted_questions_comment_likes_id_seq definition
+-- DROP SEQUENCE public.attempted_questions_comment_likes_id_seq;
+
+create sequence public.attempted_questions_comment_likes_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.attempted_questions_comments_id_seq definition
+-- DROP SEQUENCE public.attempted_questions_comments_id_seq;
+
+create sequence public.attempted_questions_comments_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.attempted_questions_id_seq definition
+-- DROP SEQUENCE public.attempted_questions_id_seq;
+
+create sequence public.attempted_questions_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.attempted_questions_likes_id_seq definition
+-- DROP SEQUENCE public.attempted_questions_likes_id_seq;
+
+create sequence public.attempted_questions_likes_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.bookmarks_id_seq definition
+-- DROP SEQUENCE public.bookmarks_id_seq;
+
+create sequence public.bookmarks_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.comment_likes_id_seq definition
+-- DROP SEQUENCE public.comment_likes_id_seq;
+
+create sequence public.comment_likes_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.comments_id_seq definition
+-- DROP SEQUENCE public.comments_id_seq;
+
+create sequence public.comments_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.mock_attempted_questions_id_seq definition
+-- DROP SEQUENCE public.mock_attempted_questions_id_seq;
+
+create sequence public.mock_attempted_questions_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.mock_test_attempts_id_seq definition
+-- DROP SEQUENCE public.mock_test_attempts_id_seq;
+
+create sequence public.mock_test_attempts_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.mock_test_id_seq definition
+-- DROP SEQUENCE public.mock_test_id_seq;
+
+create sequence public.mock_test_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.mock_test_questions_id_seq definition
+-- DROP SEQUENCE public.mock_test_questions_id_seq;
+
+create sequence public.mock_test_questions_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.mock_test_types_id_seq definition
+-- DROP SEQUENCE public.mock_test_types_id_seq;
+
+create sequence public.mock_test_types_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.options_id_seq definition
+-- DROP SEQUENCE public.options_id_seq;
+
+create sequence public.options_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.permission_main_type_id_seq definition
+-- DROP SEQUENCE public.permission_main_type_id_seq;
+
+create sequence public.permission_main_type_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.permission_sub_types_id_seq definition
+-- DROP SEQUENCE public.permission_sub_types_id_seq;
+
+create sequence public.permission_sub_types_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.permissions_admin_id_seq definition
+-- DROP SEQUENCE public.permissions_admin_id_seq;
+
+create sequence public.permissions_admin_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.permissions_id_seq definition
+-- DROP SEQUENCE public.permissions_id_seq;
+
+create sequence public.permissions_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.permissions_old_id_seq definition
+-- DROP SEQUENCE public.permissions_old_id_seq;
+
+create sequence public.permissions_old_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.portal_id_seq definition
+-- DROP SEQUENCE public.portal_id_seq;
+
+create sequence public.portal_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.prediction_file_id_seq definition
+-- DROP SEQUENCE public.prediction_file_id_seq;
+
+create sequence public.prediction_file_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.question_id_seq definition
+-- DROP SEQUENCE public.question_id_seq;
+
+create sequence public.question_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.strategy_video_id_seq definition
+-- DROP SEQUENCE public.strategy_video_id_seq;
+
+create sequence public.strategy_video_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.templates_and_grammar_pdfs_id_seq definition
+-- DROP SEQUENCE public.templates_and_grammar_pdfs_id_seq;
+
+create sequence public.templates_and_grammar_pdfs_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.test_categories_id_seq definition
+-- DROP SEQUENCE public.test_categories_id_seq;
+
+create sequence public.test_categories_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.test_id_seq definition
+-- DROP SEQUENCE public.test_id_seq;
+
+create sequence public.test_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.test_question_notes_id_seq definition
+-- DROP SEQUENCE public.test_question_notes_id_seq;
+
+create sequence public.test_question_notes_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.test_questions_id_seq definition
+-- DROP SEQUENCE public.test_questions_id_seq;
+
+create sequence public.test_questions_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.users_id_seq definition
+-- DROP SEQUENCE public.users_id_seq;
+
+create sequence public.users_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.vocab_bank_id_seq definition
+-- DROP SEQUENCE public.vocab_bank_id_seq;
+
+create sequence public.vocab_bank_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;
+-- public.white_label_total_accounts_id_seq definition
+-- DROP SEQUENCE public.white_label_total_accounts_id_seq;
+
+create sequence public.white_label_total_accounts_id_seq
+	increment by 1
+	minvalue 1
+	maxvalue 2147483647
+	start 1
+	cache 1
+	no cycle;

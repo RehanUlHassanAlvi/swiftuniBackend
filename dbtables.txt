@@ -1,0 +1,819 @@
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+
+---------------------------------------------------------------------------------
+
+
+
+
+
+
+
+-- DROP FUNCTION public.generate_random_string(int4);
+
+create or replace
+function public.generate_random_string(length integer)
+ returns text
+ language plpgsql
+as $function$
+	declare
+  chars text[] := '{0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z}';
+
+result text := '';
+
+i integer := 0;
+
+begin
+  if length < 0 then
+    raise exception 'Given length cannot be less than 0';
+end if;
+
+for i in 1.. length loop
+    result := result || chars[ceil(61 * random())];
+end loop;
+
+return result;
+end;
+
+$function$
+;
+
+
+
+
+
+
+
+
+
+----------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+-- public.mock_test_id_ definition
+-- Drop table
+-- DROP TABLE public.mock_test_id_;
+
+create table public.mock_test_id_ (
+	mock_test_id int4 null
+);
+-- public.mock_test_types definition
+-- Drop table
+-- DROP TABLE public.mock_test_types;
+
+create table public.mock_test_types (
+	id serial4 not null,
+	"name" varchar null,
+	constraint mock_test_types_pk primary key (id)
+);
+-- public.permission_main_type definition
+-- Drop table
+-- DROP TABLE public.permission_main_type;
+
+create table public.permission_main_type (
+	id serial4 not null,
+	main_type_name varchar null,
+	created_at timestamp default now() null,
+	constraint permission_main_type_pk primary key (id)
+);
+-- public.permission_sub_types definition
+-- Drop table
+-- DROP TABLE public.permission_sub_types;
+
+create table public.permission_sub_types (
+	id serial4 not null,
+	sub_type_name varchar null,
+	created_at timestamp default now() null,
+	constraint permission_sub_types_pk primary key (id)
+);
+-- public.plans_for_whitelabels definition
+-- Drop table
+-- DROP TABLE public.plans_for_whitelabels;
+
+create table public.plans_for_whitelabels (
+	id varchar default generate_random_string(24) not null,
+	"name" varchar null,
+	plan varchar null,
+	created_at timestamp default now() null,
+	updated_at timestamp null,
+	constraint plans_for_whitelabels_pk primary key (id)
+);
+-- public.portal definition
+-- Drop table
+-- DROP TABLE public.portal;
+
+create table public.portal (
+	id serial4 not null,
+	portal_link varchar null,
+	portal_owner_name varchar null,
+	created_at timestamp default now() null,
+	updated_at timestamp null,
+	facebook_link varchar null,
+	whatsapp_link varchar null,
+	telegram_link varchar null,
+	phone_no varchar null,
+	support_email varchar null,
+	support_address varchar null,
+	portal_logo varchar null,
+	portal_favicon varchar null,
+	landing_img varchar null,
+	strategy_video_visible bool default false null,
+	template_visible bool default false null,
+	grammar_visible bool default false null,
+	self_strategy_video_visible bool default true null,
+	self_template_visible bool default true null,
+	self_grammar_visible bool default true null,
+	"location" varchar null,
+	constraint portal_pk primary key (id),
+	constraint portal_unique unique (portal_link),
+	constraint portal_unique_2 unique (portal_link)
+);
+-- public.prediction_file definition
+-- Drop table
+-- DROP TABLE public.prediction_file;
+
+create table public.prediction_file (
+	id serial4 not null,
+	"name" varchar null,
+	file_url varchar null,
+	priority int4 null,
+	core bool null,
+	created_at timestamp default now() null,
+	updated_at timestamp null,
+	constraint prediction_file_pk primary key (id)
+);
+-- public.subplans_for_whitelabels definition
+-- Drop table
+-- DROP TABLE public.subplans_for_whitelabels;
+
+create table public.subplans_for_whitelabels (
+	id varchar default generate_random_string(24) not null,
+	"name" varchar null,
+	created_at timestamp default now() null,
+	updated_at timestamp null,
+	mock_only bool default false null,
+	constraint subplans_for_whitelabels_pk primary key (id)
+);
+-- public.subscriptions definition
+-- Drop table
+-- DROP TABLE public.subscriptions;
+
+create table public.subscriptions (
+	id varchar default generate_random_string(24) not null,
+	"name" varchar null,
+	"desc" varchar null,
+	price_pkr int4 null,
+	created_at timestamp default now() null,
+	updated_at timestamp null,
+	inactive bool default false null,
+	days int4 default 10 null,
+	discount varchar null,
+	constraint subscriptions_pk primary key (id)
+);
+-- public.test_categories definition
+-- Drop table
+-- DROP TABLE public.test_categories;
+
+create table public.test_categories (
+	id serial4 not null,
+	category_name varchar not null,
+	order_id int4 null,
+	created_at timestamp default now() null,
+	updated_at timestamp null,
+	constraint test_categories_pk primary key (id),
+	constraint test_categories_un unique (category_name)
+);
+-- public.admins definition
+-- Drop table
+-- DROP TABLE public.admins;
+
+create table public.admins (
+	id serial4 not null,
+	"name" varchar null,
+	email varchar not null,
+	"password" varchar null,
+	created_at timestamp default now() null,
+	updated_at timestamp null,
+	portal_id int4 null,
+	"role" varchar default 'admin'::character varying null,
+	transaction_details text null,
+	constraint admins_pk primary key (id),
+	constraint admins_unique unique (email),
+	constraint admins_portal_fk foreign key (portal_id) references public.portal(id) on
+delete
+	cascade
+);
+-- public.bridge_paln_subplans definition
+-- Drop table
+-- DROP TABLE public.bridge_paln_subplans;
+
+create table public.bridge_paln_subplans (
+	id varchar default generate_random_string(24) not null,
+	plan_id varchar null,
+	subplan_id varchar null,
+	price_per_account varchar null,
+	created_at timestamp default now() null,
+	updated_at timestamp null,
+	constraint bridge_paln_subplans_pk primary key (id),
+	constraint bridge_paln_subplans_plans_for_whitelabels_fk foreign key (plan_id) references public.plans_for_whitelabels(id) on
+delete
+	cascade,
+	constraint bridge_paln_subplans_subplans_for_whitelabels_fk foreign key (subplan_id) references public.subplans_for_whitelabels(id) on
+	delete
+		cascade
+);
+-- public.mock_test definition
+-- Drop table
+-- DROP TABLE public.mock_test;
+
+create table public.mock_test (
+	id serial4 not null,
+	"name" varchar null,
+	total_time int4 null,
+	created_at timestamp default now() null,
+	updated_at timestamp null,
+	order_id int4 null,
+	core bool default false null,
+	mock_test_type_id int4 null,
+	individual_times text null,
+	constraint mock_test_unique unique (name),
+	constraint newtable_pk primary key (id),
+	constraint mock_test_mock_test_types_fk foreign key (mock_test_type_id) references public.mock_test_types(id)
+);
+-- public.permissions definition
+-- Drop table
+-- DROP TABLE public.permissions;
+
+create table public.permissions (
+	id varchar default generate_random_string(10) not null,
+	"name" varchar null,
+	created_at timestamp default now() null,
+	main_type int4 null,
+	sub_type int4 null,
+	old_id varchar default nextval('permissions_old_id_seq'::regclass) not null,
+	constraint permissions_pk primary key (id),
+	constraint permissions_permission_main_type_fk foreign key (main_type) references public.permission_main_type(id),
+	constraint permissions_permission_sub_types_fk foreign key (sub_type) references public.permission_sub_types(id)
+);
+-- public.permissions_admin definition
+-- Drop table
+-- DROP TABLE public.permissions_admin;
+
+create table public.permissions_admin (
+	id serial4 not null,
+	admin_id int4 not null,
+	permission_id varchar not null,
+	created_at timestamp default now() null,
+	constraint permissions_admin_pk primary key (id),
+	constraint permissions_admin_admins_fk foreign key (admin_id) references public.admins(id) on
+delete
+	cascade,
+	constraint permissions_admin_permissions_fk foreign key (permission_id) references public.permissions(id) on
+	delete
+		cascade
+);
+-- public.strategy_video definition
+-- Drop table
+-- DROP TABLE public.strategy_video;
+
+create table public.strategy_video (
+	id serial4 not null,
+	title varchar null,
+	author varchar null,
+	yt_link varchar null,
+	category varchar null,
+	priority int4 null,
+	"language" varchar null,
+	core bool null,
+	thumbnail varchar null,
+	created_at timestamp default now() null,
+	updated_at timestamp null,
+	portal_id int4 null,
+	constraint strategy_video_pk primary key (id),
+	constraint strategy_video_portal_fk foreign key (portal_id) references public.portal(id) on
+delete
+	cascade
+);
+-- public.templates_and_grammar_pdfs definition
+-- Drop table
+-- DROP TABLE public.templates_and_grammar_pdfs;
+
+create table public.templates_and_grammar_pdfs (
+	id serial4 not null,
+	"name" varchar null,
+	pdf_url varchar null,
+	is_template bool null,
+	created_at timestamp default now() null,
+	updated_at timestamp null,
+	portal_id int4 null,
+	constraint templates_and_grammar_pdfs_unique unique (id),
+	constraint templates_and_grammar_pdfs_portal_fk foreign key (portal_id) references public.portal(id) on
+delete
+	cascade
+);
+-- public.test definition
+-- Drop table
+-- DROP TABLE public.test;
+
+create table public.test (
+	id serial4 not null,
+	category_id int4 null,
+	test_name varchar not null,
+	is_answer_fixed bool null,
+	order_id int4 null,
+	created_at timestamp default now() null,
+	updated_at timestamp null,
+	beginning_time int4 null,
+	total_time int4 null,
+	constraint test_pk primary key (id),
+	constraint test_un unique (test_name),
+	constraint test_fk foreign key (category_id) references public.test_categories(id) on
+delete
+	cascade
+);
+-- public.users definition
+-- Drop table
+-- DROP TABLE public.users;
+
+create table public.users (
+	id serial4 not null,
+	"name" varchar null,
+	email varchar not null,
+	"password" varchar null,
+	is_email_verified bool default false null,
+	created_at timestamp default now() null,
+	updated_at timestamp null,
+	google_id varchar null,
+	country_code varchar null,
+	phone_number varchar null,
+	is_deleted bool default false null,
+	city varchar null,
+	image_url varchar null,
+	pte_stats jsonb null,
+	academic_stats jsonb null,
+	last_updated_pte timestamp null,
+	last_updated_acadamic timestamp null,
+	exam_date timestamp null,
+	exam_target text null,
+	exam_date_created_at timestamp null,
+	portal_id int4 null,
+	"type" varchar null,
+	student_note varchar null,
+	deleted_from_trash bool default false null,
+	subscription_id varchar null,
+	plan_id varchar null,
+	is_subscribed bool default false null,
+	non_ai int4 default 20 null,
+	speaking int4 default 5 null,
+	writing int4 default 3 null,
+	subscription_time timestamptz default now() null,
+	session_expiry timestamptz default now() null,
+	sessionid varchar null,
+	constraint users_pk primary key (id),
+	constraint users_un unique (email),
+	constraint users_plans_for_whitelabels_fk foreign key (plan_id) references public.plans_for_whitelabels(id),
+	constraint users_portal_fk foreign key (portal_id) references public.portal(id),
+	constraint users_subscriptions_fk foreign key (subscription_id) references public.subscriptions(id)
+);
+-- public.vocab_bank definition
+-- Drop table
+-- DROP TABLE public.vocab_bank;
+
+create table public.vocab_bank (
+	id serial4 not null,
+	"name" varchar null,
+	"type" varchar null,
+	created_at timestamp default now() null,
+	updated_at timestamp null,
+	user_id int4 null,
+	description varchar null,
+	constraint vocab_bank_pk primary key (id),
+	constraint vocab_bank_users_fk foreign key (user_id) references public.users(id) on
+delete
+	cascade
+);
+-- public.mock_test_attempts definition
+-- Drop table
+-- DROP TABLE public.mock_test_attempts;
+
+create table public.mock_test_attempts (
+	id serial4 not null,
+	mock_test_id int4 not null,
+	user_id int4 not null,
+	start_time timestamp default now() null,
+	end_time timestamp null,
+	total_marks_obtained varchar null,
+	created_at timestamp default now() null,
+	updated_at timestamp null,
+	status varchar default 'pending'::character varying null,
+	analytics json null,
+	constraint mock_test_attempts_pk primary key (id),
+	constraint mock_test_attempts_mock_test_fk foreign key (mock_test_id) references public.mock_test(id) on
+delete
+	cascade,
+	constraint mock_test_attempts_user_fk foreign key (user_id) references public.users(id) on
+	delete
+		cascade
+);
+-- public.promo_codes definition
+-- Drop table
+-- DROP TABLE public.promo_codes;
+
+create table public.promo_codes (
+	id varchar default generate_random_string(5) not null,
+	percentage int4 null,
+	created_at timestamp null,
+	updated_at timestamp null,
+	active bool default true null,
+	user_id int4 null,
+	fixed_amount int4 null,
+	portal_id int4 null,
+	count int4 default 1 null,
+	temp_count int4 default 0 null,
+	expiry_date timestamp null,
+	constraint promo_codes_pk primary key (id),
+	constraint promo_codes_portal_fk foreign key (portal_id) references public.portal(id),
+	constraint promo_codes_users_fk foreign key (user_id) references public.users(id)
+);
+-- public.question definition
+-- Drop table
+-- DROP TABLE public.question;
+
+create table public.question (
+	id serial4 not null,
+	"name" varchar null,
+	"statement" varchar null,
+	total_marks int4 null,
+	created_at timestamp default now() null,
+	updated_at timestamp null,
+	major_aspects varchar null,
+	minor_aspects varchar null,
+	audio_object varchar null,
+	test_id int4 default 1 null,
+	question_image varchar null,
+	time_allowed int4 null,
+	prediction bool default false null,
+	constraint question_pk primary key (id),
+	constraint question_test_fk foreign key (test_id) references public.test(id)
+);
+-- public.test_questions definition
+-- Drop table
+-- DROP TABLE public.test_questions;
+
+create table public.test_questions (
+	id serial4 not null,
+	test_id int4 null,
+	question_id int4 null,
+	order_id int4 null,
+	created_at timestamp default now() null,
+	updated_at timestamp null,
+	constraint test_questions_pk primary key (id),
+	constraint test_questions_fk foreign key (test_id) references public.test(id) on
+delete
+	cascade,
+	constraint test_questions_question_id_fk foreign key (question_id) references public.question(id) on
+	delete
+		cascade
+);
+-- public.user_transactions definition
+-- Drop table
+-- DROP TABLE public.user_transactions;
+
+create table public.user_transactions (
+	id varchar default generate_random_string(24) null,
+	user_id int4 null,
+	subscription_id varchar null,
+	status varchar null,
+	request_payload varchar null,
+	response_payload varchar null,
+	bank_alfalah_subscription_id varchar null,
+	created_at timestamp default now() null,
+	updated_at timestamp null,
+	promocode_id varchar null,
+	image_url varchar null,
+	is_approved bool default false null,
+	country varchar null,
+	currency varchar default '"PKR"'::character varying null,
+	phone varchar null,
+	email varchar null,
+	portal_id int4 default 1 null,
+	order_id varchar null,
+	transaction_reference_number varchar null,
+	transaction_id varchar null,
+	transaction_amount varchar null,
+	transaction_description varchar null,
+	transaction_status varchar null,
+	reference_number varchar null,
+	"location" varchar null,
+	bought_by_and_reason text null,
+	constraint user_transactions_portal_fk foreign key (portal_id) references public.portal(id),
+	constraint user_transactions_promo_codes_fk foreign key (promocode_id) references public.promo_codes(id),
+	constraint user_transactions_subscriptions_fk foreign key (subscription_id) references public.subscriptions(id),
+	constraint user_transactions_users_fk foreign key (user_id) references public.users(id) on
+delete
+	cascade
+);
+-- public.whitelabel_transactions definition
+-- Drop table
+-- DROP TABLE public.whitelabel_transactions;
+
+create table public.whitelabel_transactions (
+	id varchar default generate_random_string(24) not null,
+	admin_id int4 null,
+	portal_id int4 default 1 null,
+	plan_id varchar null,
+	status varchar null,
+	request_payload varchar null,
+	response_payload varchar null,
+	bank_alfalah_subscription_id varchar null,
+	promocode_id varchar null,
+	country varchar null,
+	currency varchar default '"PKR"'::character varying null,
+	phone varchar null,
+	email varchar null,
+	order_id varchar null,
+	transaction_reference_number varchar null,
+	transaction_id varchar null,
+	transaction_amount varchar null,
+	transaction_description varchar null,
+	transaction_status varchar null,
+	created_at timestamp default now() null,
+	updated_at timestamp null,
+	image_url varchar null,
+	is_approved bool default false null,
+	no_of_accounts_purchased varchar null,
+	no_of_accounts_used varchar null,
+	amount_paid varchar null,
+	reference_number varchar null,
+	"location" varchar null,
+	bought_by_and_reason text null,
+	constraint whitelabel_transactions_pk primary key (id),
+	constraint whitelabel_transactions_admins_fk foreign key (admin_id) references public.admins(id),
+	constraint whitelabel_transactions_plans_for_whitelabels_fk foreign key (plan_id) references public.plans_for_whitelabels(id),
+	constraint whitelabel_transactions_portal_fk foreign key (portal_id) references public.portal(id),
+	constraint whitelabel_transactions_promo_codes_fk foreign key (promocode_id) references public.promo_codes(id)
+);
+-- public.appeared_questions definition
+-- Drop table
+-- DROP TABLE public.appeared_questions;
+
+create table public.appeared_questions (
+	id serial4 not null,
+	question_id int4 not null,
+	exam_date timestamp not null,
+	exam_venue varchar null,
+	exam_memory varchar null,
+	created_at timestamp default now() null,
+	user_id int4 not null,
+	constraint appeared_questions_pk primary key (id),
+	constraint appeared_questions_fk foreign key (question_id) references public.question(id) on
+delete
+	cascade,
+	constraint appeared_questions_users_fk foreign key (user_id) references public.users(id) on
+	delete
+		cascade
+);
+-- public.attempted_questions definition
+-- Drop table
+-- DROP TABLE public.attempted_questions;
+
+create table public.attempted_questions (
+	id serial4 not null,
+	test_question_id int4 null,
+	user_id int4 null,
+	marks_obtained float4 null,
+	users_response text null,
+	time_taken int4 null,
+	created_at timestamp default now() null,
+	updated_at timestamp null,
+	is_ptecore bool default false null,
+	constraint attempted_questions_pk primary key (id),
+	constraint attempted_questions_fk foreign key (test_question_id) references public.test_questions(id) on
+delete
+	cascade,
+	constraint attempted_questions_users_fk foreign key (user_id) references public.users(id) on
+	delete
+		cascade
+);
+-- public.attempted_questions_comments definition
+-- Drop table
+-- DROP TABLE public.attempted_questions_comments;
+
+create table public.attempted_questions_comments (
+	id serial4 not null,
+	craeted_at timestamp default now() null,
+	user_id int4 null,
+	attempted_question_id int4 null,
+	attempted_questions_comment varchar not null,
+	constraint attempted_questions_comments_pk primary key (id),
+	constraint attempted_questions_comments_test_questions_fk foreign key (attempted_question_id) references public.attempted_questions(id) on
+delete
+	cascade,
+	constraint attempted_questions_comments_users_fk foreign key (user_id) references public.users(id) on
+	delete
+		cascade
+);
+-- public.attempted_questions_likes definition
+-- Drop table
+-- DROP TABLE public.attempted_questions_likes;
+
+create table public.attempted_questions_likes (
+	id serial4 not null,
+	user_id int4 null,
+	attempted_question_id int4 null,
+	created_at timestamp default now() null,
+	constraint attempted_question_likes_pk primary key (id),
+	constraint attempted_question_likes_users_fk foreign key (user_id) references public.users(id) on
+delete
+	cascade,
+	constraint attempted_questions_likes_attempted_questions_fk foreign key (attempted_question_id) references public.attempted_questions(id) on
+	delete
+		cascade
+);
+-- public.bookmarks definition
+-- Drop table
+-- DROP TABLE public.bookmarks;
+
+create table public.bookmarks (
+	id serial4 not null,
+	test_question_id int4 not null,
+	user_id int4 not null,
+	created_at timestamp default now() null,
+	constraint bookmarks_pk primary key (id),
+	constraint bookmarks_fk foreign key (test_question_id) references public.test_questions(id) on
+delete
+	cascade,
+	constraint bookmarks_fk_1 foreign key (user_id) references public.users(id) on
+	delete
+		cascade
+);
+-- public."comments" definition
+-- Drop table
+-- DROP TABLE public."comments";
+
+create table public."comments" (
+	id serial4 not null,
+	craeted_at timestamp default now() null,
+	user_id int4 null,
+	test_question_id int4 null,
+	"comment" varchar not null,
+	comment_img varchar null,
+	category varchar null,
+	parent_id int4 null,
+	constraint comments_pk primary key (id),
+	constraint comments_comments_fk foreign key (parent_id) references public."comments"(id) on
+delete
+	cascade,
+	constraint comments_test_questions_fk foreign key (test_question_id) references public.test_questions(id) on
+	delete
+		cascade,
+		constraint comments_users_fk foreign key (user_id) references public.users(id) on
+		delete
+			cascade
+);
+-- public.mock_test_questions definition
+-- Drop table
+-- DROP TABLE public.mock_test_questions;
+
+create table public.mock_test_questions (
+	id serial4 not null,
+	question_id int4 null,
+	order_id int4 null,
+	created_at timestamp default now() null,
+	updated_at timestamp null,
+	mock_test_id int4 null,
+	constraint mock_test_questions_pk primary key (id),
+	constraint mock_test_questions_mock_test_fk foreign key (mock_test_id) references public.mock_test(id) on
+delete
+	cascade,
+	constraint mock_test_questions_question_id_fk foreign key (question_id) references public.question(id) on
+	delete
+		cascade
+);
+-- public."options" definition
+-- Drop table
+-- DROP TABLE public."options";
+
+create table public."options" (
+	id serial4 not null,
+	option_names varchar null,
+	answer_names varchar null,
+	question_id int4 null,
+	created_at timestamp default now() null,
+	updated_at timestamp null,
+	option_text varchar null,
+	constraint options_pk primary key (id),
+	constraint options_fk foreign key (question_id) references public.question(id) on
+delete
+	cascade
+);
+-- public.test_question_notes definition
+-- Drop table
+-- DROP TABLE public.test_question_notes;
+
+create table public.test_question_notes (
+	id serial4 not null,
+	test_question_id int4 not null,
+	user_id int4 not null,
+	created_at timestamp default now() null,
+	note varchar null,
+	constraint test_question_notes_pk primary key (id),
+	constraint test_question_notes_fk foreign key (user_id) references public.users(id) on
+delete
+	cascade,
+	constraint test_question_notes_fk_1 foreign key (test_question_id) references public.test_questions(id) on
+	delete
+		cascade
+);
+-- public.white_label_total_accounts definition
+-- Drop table
+-- DROP TABLE public.white_label_total_accounts;
+
+create table public.white_label_total_accounts (
+	id serial4 not null,
+	portal_id int4 null,
+	total_accounts int4 null,
+	last_white_label_transaction_id varchar null,
+	created_at timestamp default now() null,
+	updated_at timestamp null,
+	plan_id varchar null,
+	constraint white_label_total_accounts_pk primary key (id),
+	constraint white_label_total_accounts_plans_for_whitelabels_fk foreign key (plan_id) references public.plans_for_whitelabels(id),
+	constraint white_label_total_accounts_portal_fk foreign key (portal_id) references public.portal(id),
+	constraint white_label_total_accounts_whitelabel_transactions_fk foreign key (last_white_label_transaction_id) references public.whitelabel_transactions(id)
+);
+-- public.attempted_questions_comment_likes definition
+-- Drop table
+-- DROP TABLE public.attempted_questions_comment_likes;
+
+create table public.attempted_questions_comment_likes (
+	id serial4 not null,
+	user_id int4 null,
+	attempted_questions_comment_id int4 null,
+	created_at timestamp default now() null,
+	constraint attempted_questions_comment_likes_pk primary key (id),
+	constraint attempted_questions_comment_likes_comments_fk foreign key (attempted_questions_comment_id) references public.attempted_questions_comments(id) on
+delete
+	cascade on
+	update
+		cascade,
+		constraint attempted_questions_comment_likes_users_fk foreign key (user_id) references public.users(id) on
+		delete
+			cascade on
+			update
+				cascade
+);
+-- public.comment_likes definition
+-- Drop table
+-- DROP TABLE public.comment_likes;
+
+create table public.comment_likes (
+	id serial4 not null,
+	user_id int4 null,
+	comment_id int4 null,
+	created_at timestamp default now() null,
+	constraint comment_likes_pk primary key (id),
+	constraint comment_likes_comments_fk foreign key (comment_id) references public."comments"(id) on
+delete
+	cascade,
+	constraint comment_likes_users_fk foreign key (user_id) references public.users(id) on
+	delete
+		cascade
+);
+-- public.mock_attempted_questions definition
+-- Drop table
+-- DROP TABLE public.mock_attempted_questions;
+
+create table public.mock_attempted_questions (
+	id serial4 not null,
+	mock_test_question_id int4 null,
+	user_id int4 null,
+	marks_obtained float4 null,
+	users_response text null,
+	time_taken int4 null,
+	created_at timestamp default now() null,
+	updated_at timestamp null,
+	is_ptecore bool default false null,
+	mock_test_attempt_id int4 null,
+	alltimes text null,
+	audio_url varchar null,
+	constraint mock_attempted_questions_pk primary key (id),
+	constraint mock_attempted_questions_fk foreign key (mock_test_question_id) references public.mock_test_questions(id) on
+delete
+	cascade,
+	constraint mock_attempted_questions_mock_test_attempts_fk foreign key (mock_test_attempt_id) references public.mock_test_attempts(id) on
+	delete
+		cascade,
+		constraint mock_attempted_questions_users_fk foreign key (user_id) references public.users(id) on
+		delete
+			cascade
+);
+
+

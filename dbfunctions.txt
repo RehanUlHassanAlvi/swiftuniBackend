@@ -1,0 +1,8726 @@
+-- DROP FUNCTION public.add_admin(varchar, varchar, varchar, int4, _varchar);
+
+create or replace
+function public.add_admin("EMAIL" character varying,
+"NAME" character varying,
+"PASSWORD" character varying,
+"PORTALID" integer,
+"Permissions" character varying[])
+ returns integer
+ language plpgsql
+as $function$
+	declare 
+		admin_id_ integer;
+
+begin
+		insert
+	into
+	public.admins(email,
+	"name",
+	"password",
+	portal_id,
+	role)
+values ($1 ,
+$2 ,
+pgp_sym_encrypt($3,
+'encryptingpassword',
+'compress-algo=1'),
+$4,
+'admin') returning id
+into
+	admin_id_;
+
+for i in 1.. array_length($5, 1) loop
+	        insert
+	into
+	public.permissions_admin (admin_id,
+	permission_id)
+values (admin_id_,
+$5[i]);
+end loop;
+
+return admin_id_;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_admin_in_other(varchar, varchar, varchar, int4, _varchar);
+
+create or replace
+function public.add_admin_in_other("EMAIL" character varying,
+"NAME" character varying,
+"PASSWORD" character varying,
+"PORTALID" integer,
+"Permissions" character varying[])
+ returns void
+ language plpgsql
+as $function$
+	declare 
+		admin_id_ integer;
+
+begin
+		insert
+	into
+	public.admins(email,
+	"name",
+	"password",
+	portal_id)
+values ($1 ,
+$2 ,
+pgp_sym_encrypt($3,
+'encryptingpassword',
+'compress-algo=1'),
+$4) returning id
+into
+	admin_id_;
+
+for i in 1.. array_length($5, 1) loop
+	        insert
+	into
+	public.permissions_admin (admin_id,
+	permission_id)
+values (admin_id_,
+$5[i]);
+end loop;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_appeared_question(int4, timestamp, varchar, varchar, int4);
+
+create or replace
+function public.add_appeared_question("QUESTIONID" integer,
+"EXAMDATE" timestamp without time zone,
+"EXAMVENUE" character varying,
+"EXAMMEMORY" character varying,
+"USERID" integer)
+ returns void
+ language plpgsql
+as $function$
+	begin
+		insert
+	into
+	public.appeared_questions (question_id,
+	exam_date,
+	exam_venue,
+	exam_memory,
+	user_id)
+values($1,
+$2,
+$3,
+$4,
+$5);
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_attempted_question(int4, int4, float4, varchar, int4, bool);
+
+create or replace
+function public.add_attempted_question("TESTQUESTIONID" integer,
+"USERID" integer,
+"MARKSOBTAINED" real,
+"USERSRESPONSE" character varying,
+"TIMETAKEN" integer,
+"ISPTECORE" boolean)
+ returns void
+ language plpgsql
+as $function$
+	begin
+		insert
+	into
+	public.attempted_questions(
+		test_question_id,
+		user_id,
+		marks_obtained,
+		users_response,
+		time_taken,
+		is_ptecore
+		)
+values ($1 ,
+$2 ,
+$3 ,
+$4 ,
+$5 ,
+$6);
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_attempted_question_like(int4, int4);
+
+create or replace
+function public.add_attempted_question_like("USERID" integer,
+"ATTEMPTEDQUESTIONID" integer)
+ returns table("Status" integer,
+"TotalLikes" integer)
+ language plpgsql
+as $function$
+	declare
+		status_ integer;
+
+begin
+	    if exists (
+select
+	1
+from
+	public.attempted_questions_likes
+where
+	user_id = $1
+	and attempted_question_id = $2) then
+	        status_ := 0;
+
+return QUERY
+	        select
+	status_,
+	COUNT(*)::integer
+from
+	public.attempted_questions_likes
+where
+	attempted_question_id = $2;
+else
+	        insert
+	into
+	public.attempted_questions_likes(user_id,
+	attempted_question_id)
+values ($1,
+$2);
+
+status_ := 1;
+
+return QUERY
+	        select
+	status_,
+	COUNT(*)::integer
+from
+	public.attempted_questions_likes
+where
+	attempted_question_id = $2;
+end if;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_attempted_questions_comment(varchar, int4, int4);
+
+create or replace
+function public.add_attempted_questions_comment("COMMENT" character varying,
+"USERID" integer,
+"ATTEMPTEDQUESTIONID" integer)
+ returns void
+ language plpgsql
+as $function$
+	begin
+		insert
+	into
+	public.attempted_questions_comments(
+		attempted_questions_comment,
+		user_id,
+		attempted_question_id
+		)
+values ($1 ,
+$2 ,
+$3);
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_attempted_questions_comment_like(int4, int4);
+
+create or replace
+function public.add_attempted_questions_comment_like("USERID" integer,
+"ATTEMPTEDQUESTIONCOMMENTID" integer)
+ returns table("Status" integer,
+"TotalLikes" integer)
+ language plpgsql
+as $function$
+	declare
+		status_ integer;
+
+begin
+	    if exists (
+select
+	1
+from
+	public.attempted_questions_comment_likes
+where
+	user_id = $1
+	and attempted_questions_comment_id = $2) then
+	        status_ := 0;
+
+return QUERY
+	        select
+	status_,
+	COUNT(*)::integer
+from
+	public.attempted_questions_comment_likes
+where
+	attempted_questions_comment_id = $2;
+else
+	        insert
+	into
+	public.attempted_questions_comment_likes(user_id,
+	attempted_questions_comment_id)
+values ($1,
+$2);
+
+status_ := 1;
+
+return QUERY
+	        select
+	status_,
+	COUNT(*)::integer
+from
+	public.attempted_questions_comment_likes
+where
+	attempted_questions_comment_id = $2;
+end if;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_bookmark(int4, int4);
+
+create or replace
+function public.add_bookmark("TESTQUESTIONID" integer,
+"USERID" integer)
+ returns integer
+ language plpgsql
+as $function$
+declare
+    new_id INT;
+
+begin
+    delete
+from
+	public.bookmarks
+where
+	test_question_id = $1
+	and user_id = $2;
+
+insert
+	into
+	public.bookmarks(test_question_id,
+	user_id)
+values ($1,
+$2)
+    returning id
+into
+	new_id;
+
+return new_id;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_comment(varchar, varchar, varchar, int4, int4, int4);
+
+create or replace
+function public.add_comment("COMMENT" character varying,
+"COMMENTIMG" character varying,
+"CATEGORY" character varying,
+"USERID" integer,
+"TESTQUESTIONID" integer,
+"PARENTID" integer)
+ returns void
+ language plpgsql
+as $function$
+	begin
+		insert
+	into
+	public.comments(
+		comment,
+		comment_img,
+		category,
+		user_id,
+		test_question_id,
+		parent_id		
+		)
+values ($1 ,
+$2 ,
+$3 ,
+$4 ,
+$5 ,
+$6);
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_comment_like(int4, int4);
+
+create or replace
+function public.add_comment_like("USERID" integer,
+"COMMENTID" integer)
+ returns table("Status" integer,
+"TotalLikes" integer)
+ language plpgsql
+as $function$
+	declare
+		status_ integer;
+
+begin
+	    if exists (
+select
+	1
+from
+	public.comment_likes
+where
+	user_id = $1
+	and comment_id = $2) then
+	        status_ := 0;
+
+return QUERY
+	        select
+	status_,
+	COUNT(*)::integer
+from
+	public.comment_likes
+where
+	comment_id = $2;
+else
+	        insert
+	into
+	public.comment_likes(user_id,
+	comment_id)
+values ($1,
+$2);
+
+status_ := 1;
+
+return QUERY
+	        select
+	status_,
+	COUNT(*)::integer
+from
+	public.comment_likes
+where
+	comment_id = $2;
+end if;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_edit_test_question_note(int4, int4, varchar);
+
+create or replace
+function public.add_edit_test_question_note("TESTQUESTIONID" integer,
+"USERID" integer,
+"NOTE" character varying)
+ returns integer
+ language plpgsql
+as $function$
+	begin
+		if exists (
+select
+	1
+from
+	public.test_question_notes tqn
+where
+	tqn.test_question_id = $1
+	and tqn.user_id = $2) then 
+			update
+	public.test_question_notes
+set
+	note = $3
+where
+	test_question_id = $1
+	and user_id = $2;
+
+return 1;
+else
+			insert
+	into
+	public.test_question_notes(test_question_id,
+	user_id,
+	note)
+values ($1 ,
+$2 ,
+$3);
+
+return -1;
+end if;
+
+return 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_mock_attempted_question(int4, int4, float4, varchar, int4, bool, int4, text, varchar);
+
+create or replace
+function public.add_mock_attempted_question("MOCKTESTQUESTIONID" integer,
+"USERID" integer,
+"MARKSOBTAINED" real,
+"USERSRESPONSE" character varying,
+"TIMETAKEN" integer,
+"ISPTECORE" boolean,
+"MOCKTESTATTEMPTEDID" integer,
+"ALLTIMES" text,
+"AUDIOURL" character varying)
+ returns void
+ language plpgsql
+as $function$
+	begin
+		insert
+	into
+	public.mock_attempted_questions(
+		mock_test_question_id,
+		user_id,
+		marks_obtained,
+		users_response,
+		time_taken,
+		is_ptecore,
+		mock_test_attempt_id,
+		alltimes,
+		audio_url
+		)
+values ($1 ,
+		$2 ,
+		$3 ,
+		$4 ,
+		$5 ,
+		$6 ,
+		$7 ,
+		$8 ,
+		$9 
+		);
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_mock_attempted_question_timeout(int4, int4, bool, text);
+
+create or replace
+function public.add_mock_attempted_question_timeout("MOCKTESTATTEMPTEDID" integer,
+"USERID" integer,
+"ISPTECORE" boolean,
+"RESPONSEOBJECT" text)
+ returns void
+ language plpgsql
+as $function$
+declare
+    response_data jsonb;
+
+single_response jsonb;
+
+i integer;
+
+begin
+-- Parsing the stringified JSON into a jsonb object
+response_data := $4::jsonb;
+-- Print console response data
+    raise notice 'Response Data: %',
+response_data;
+-- Extracting the response object array
+    if response_data is not null then
+        for i in 0 .. jsonb_array_length(response_data) - 1 loop
+-- Extracting individual response object
+single_response := (response_data->i)::jsonb;
+-- Print console individual response object
+            raise notice 'Individual Response Object: %',
+single_response;
+
+insert
+	into
+	public.mock_attempted_questions(
+                mock_test_question_id,
+	user_id,
+	marks_obtained,
+	users_response,
+	time_taken,
+	is_ptecore,
+	mock_test_attempt_id
+            )
+values (
+                (single_response->>'MockTestQuestionTableId')::integer,
+                $2,
+                0,
+                single_response,
+                0,
+                $3,
+                $1
+            );
+end loop;
+end if;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_mock_test(varchar, int4, bool, int4);
+
+create or replace
+function public.add_mock_test("MOCKTESTNAME" character varying,
+"MOCKTESTTOTALTIME" integer,
+"ISPTECORE" boolean,
+"MOCKTESTTYPEID" integer)
+ returns integer
+ language plpgsql
+as $function$
+	declare 
+		mock_test_id_ integer;
+
+begin
+		insert
+	into
+	public.mock_test
+		(name,
+	total_time,
+	order_id ,
+	core ,
+	mock_test_type_id)
+values($1,
+$2,
+coalesce((
+select
+	MAX(order_id)
+from
+	public.mock_test),
+0) + 1 ,
+$3,
+$4)
+		returning id
+into
+	mock_test_id_;
+
+return mock_test_id_;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_mock_test(varchar, int4, bool, int4, text);
+
+create or replace
+function public.add_mock_test("MOCKTESTNAME" character varying,
+"MOCKTESTTOTALTIME" integer,
+"ISPTECORE" boolean,
+"MOCKTESTTYPEID" integer,
+"INDIVIDUALTIMES" text)
+ returns integer
+ language plpgsql
+as $function$
+	declare 
+		mock_test_id_ integer;
+
+begin
+		insert
+	into
+	public.mock_test
+		(name,
+	total_time,
+	order_id ,
+	core ,
+	mock_test_type_id,
+	individual_times)
+values($1,
+$2,
+coalesce((
+select
+	MAX(order_id)
+from
+	public.mock_test),
+0) + 1 ,
+$3,
+$4,
+$5)
+		returning id
+into
+	mock_test_id_;
+
+return mock_test_id_;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_mock_test_questions(int4, _int4);
+
+create or replace
+function public.add_mock_test_questions("MOCKTESTID" integer,
+"QUESTIONIDs" integer[])
+ returns void
+ language plpgsql
+as $function$
+begin
+	delete
+from
+	public.mock_test_questions
+where
+	mock_test_id = $1;
+
+for i in 1.. array_length($2, 1) loop
+            insert
+	into
+	public.mock_test_questions
+                (mock_test_id,
+	question_id,
+	order_id)
+values
+                ($1,
+$2[i],
+coalesce((
+select
+	MAX(order_id)
+from
+	public.test),
+0) + i);
+end loop;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_option(varchar, varchar, int4, varchar);
+
+create or replace
+function public.add_option("OPTIONNAMES" character varying,
+"ANSWERNAMES" character varying,
+"QUESTIONID" integer,
+"OPTIONTEXT" character varying)
+ returns void
+ language plpgsql
+as $function$
+	begin
+		delete
+from
+	public."options"
+where
+	question_id = $3;
+
+insert
+	into
+	public."options"
+		(option_names,
+	answer_names,
+	question_id ,
+	option_text)
+values($1,
+$2,
+$3,
+$4);
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_permissions_against_admin(_varchar, int4);
+
+create or replace
+function public.add_permissions_against_admin("PERMISSIONS" character varying[],
+"ADMINID" integer)
+ returns integer
+ language plpgsql
+as $function$
+declare
+	permission_id character varying;
+
+begin
+		
+		delete
+from
+	public.permissions_admin
+where
+	admin_id = $2;
+
+foreach permission_id in array "PERMISSIONS"
+	loop
+		insert
+	into
+	public.permissions_admin (admin_id,
+	permission_id,
+	created_at)
+values ("ADMINID",
+permission_id,
+now());
+end loop;
+-- Return success indicator, e.g., number of permissions added
+	return array_length("PERMISSIONS",
+1);
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_portal(varchar, varchar, varchar);
+
+create or replace
+function public.add_portal("PORTALLINK" character varying,
+"PORTALOWNERNAME" character varying,
+"LOCATION" character varying)
+ returns integer
+ language plpgsql
+as $function$
+	declare 
+		portal_id_ integer;
+
+begin
+		insert
+	into
+	public.portal(
+			portal_link,
+			portal_owner_name,
+			location
+			
+		)
+values ($1 ,
+$2,
+$3) returning id
+into
+	portal_id_;
+
+return portal_id_;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_prediction_file(varchar, varchar, int4, bool);
+
+create or replace
+function public.add_prediction_file("NAME" character varying,
+"FILEURL" character varying,
+"PRIORITY" integer,
+"CORE" boolean)
+ returns void
+ language plpgsql
+as $function$
+	begin
+		insert
+	into
+	public.prediction_file(
+		name,
+		file_url,
+		priority,
+		core
+		)
+values ($1 ,
+$2 ,
+$3,
+$4);
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_promo_code(int4, int4, int4, int4, int4, timestamp, varchar);
+
+create or replace
+function public.add_promo_code("PERCENTAGE" integer,
+"USERID" integer,
+"FIXEDAMOUNT" integer,
+"PORTALID" integer,
+"COUNT" integer,
+"EXPIRYDATE" timestamp without time zone,
+"NAME" character varying)
+ returns character varying
+ language plpgsql
+as $function$
+declare
+    promo_code_id_ varchar;
+
+adjusted_count integer;
+
+promo_code_id_generate varchar;
+
+begin
+    if $5 is null then
+        adjusted_count := 1;
+else
+        adjusted_count := $5;
+end if;
+
+if $7 is null then
+        promo_code_id_generate := public.generate_random_string(5);
+else
+        promo_code_id_generate := $7;
+end if;
+
+insert
+	into
+	public.promo_codes(percentage,
+	user_id,
+	fixed_amount,
+	portal_id,
+	count,
+	expiry_date,
+	id)
+values ($1,
+$2,
+$3,
+$4,
+adjusted_count,
+$6,
+promo_code_id_generate) returning id
+into
+	promo_code_id_;
+
+return promo_code_id_;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_question(varchar, varchar, int4, varchar, varchar, varchar, int4, varchar, bool);
+
+create or replace
+function public.add_question("QUESTIONNAME" character varying,
+"QUESTIONSTATEMENT" character varying,
+"TOTALMARKS" integer,
+"AUDIOOBJECT" character varying,
+"MAJORASPECTS" character varying,
+"MINORASPECTS" character varying,
+"TESTIDFORCATEGORY" integer,
+"QUESTIONIMAGE" character varying,
+"PREDICTION" boolean)
+ returns integer
+ language plpgsql
+as $function$
+	declare
+		new_question_id INT;
+
+begin
+		insert
+	into
+	public.question
+		("name",
+	"statement",
+	total_marks ,
+	audio_object,
+	major_aspects,
+	minor_aspects ,
+	test_id,
+	question_image,
+	prediction
+)
+values($1,
+$2,
+$3 ,
+$4 ,
+$5 ,
+$6 ,
+$7 ,
+$8 ,
+$9)
+		returning id
+into
+	new_question_id;
+
+insert
+	into
+	public.test_questions
+        (test_id,
+	question_id,
+	order_id)
+values
+        ($7,
+new_question_id ,
+coalesce((
+select
+	MAX(order_id)
+from
+	public.test_questions),
+0) + 1);
+
+return new_question_id;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_strategy_video(varchar, varchar, varchar, varchar, int4, varchar, bool, varchar, int4);
+
+create or replace
+function public.add_strategy_video("TITLE" character varying,
+"AUTHOR" character varying,
+"YT_LINK" character varying,
+"CATEGORY" character varying,
+"PRIORITY" integer,
+"LANGUAGE" character varying,
+"CORE" boolean,
+"THUMBNAIL" character varying,
+"PORTALID" integer)
+ returns void
+ language plpgsql
+as $function$
+begin
+	insert
+	into
+	public.strategy_video(
+		title,
+		author,
+		yt_link,
+		category,
+		priority,
+		"language",
+		core,
+		thumbnail,
+		portal_id
+	)
+values (
+		$1,
+$2,
+$3,
+$4,
+$5,
+$6,
+$7,
+$8 ,
+$9
+	);
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_student_by_admin(varchar, varchar, varchar, int4, varchar, varchar, varchar, varchar);
+
+create or replace
+function public.add_student_by_admin("NAME" character varying,
+"EMAIL" character varying,
+"PASSWORD" character varying,
+"PORTALID" integer,
+"TYPE" character varying,
+"TARGET" character varying,
+"NOTE" character varying,
+"IMAGEOFUSER" character varying)
+ returns table("UserId" integer)
+ language plpgsql
+as $function$
+	declare 
+		user_id integer;
+
+begin
+		insert
+	into
+	public.users(name,
+	email,
+	password,
+	portal_id,
+	type,
+	exam_target,
+	student_note,
+	image_url,
+	is_email_verified)
+values($1,
+$2,
+pgp_sym_encrypt($3,
+'encryptingpassword',
+'compress-algo=1'),
+$4,
+$5,
+$6,
+$7,
+$8,
+true)
+		returning id
+into
+	user_id
+		;
+
+return query
+		select
+	user_id;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_subscription(varchar, varchar, int4, int4, varchar);
+
+create or replace
+function public.add_subscription("NAME" character varying,
+"DESC" character varying,
+"PRICE_PKR" integer,
+"Days" integer,
+"DISCOUNT" character varying)
+ returns character varying
+ language plpgsql
+as $function$
+	declare 
+		subscription_id_ varchar;
+
+begin
+		insert
+	into
+	public.subscriptions("name",
+	"desc",
+	price_pkr,
+	days,
+	discount)
+values ($1,
+$2,
+$3,
+$4 ,
+$5) returning id
+into
+	subscription_id_;
+
+return subscription_id_;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_template_grammar_pdf(varchar, varchar, bool, int4);
+
+create or replace
+function public.add_template_grammar_pdf("NAME" character varying,
+"PDFURL" character varying,
+"ISTEMPLATE" boolean,
+"PORTALID" integer)
+ returns void
+ language plpgsql
+as $function$
+	begin
+		insert
+	into
+	public.templates_and_grammar_pdfs(
+		name,
+		pdf_url,
+		is_template,
+		portal_id
+		)
+values ($1 ,
+$2 ,
+$3 ,
+$4);
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_test(int4, varchar, bool, int4, int4);
+
+create or replace
+function public.add_test("CATEGORYID" integer,
+"TESTNAME" character varying,
+"ISANSWERFIXED" boolean,
+"BEGINNINGTIME" integer,
+"TOTALTIME" integer)
+ returns void
+ language plpgsql
+as $function$
+	begin
+		insert
+	into
+	public.test
+		(category_id,
+	test_name,
+	is_answer_fixed,
+	order_id,
+	beginning_time,
+	total_time)
+values($1,
+$2,
+$3,
+coalesce((
+select
+	MAX(order_id)
+from
+	public.test),
+0) + 1,
+$4,
+$5);
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_test_category(varchar);
+
+create or replace
+function public.add_test_category("CATEGORYNAME" character varying)
+ returns void
+ language plpgsql
+as $function$
+	begin
+	    insert
+	into
+	public.test_categories
+	    (category_name,
+	order_id)
+values($1,
+coalesce((
+select
+	MAX(order_id)
+from
+	public.test_categories),
+0) + 1);
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_test_questions(int4, _int4);
+
+create or replace
+function public.add_test_questions("TESTID" integer,
+"QUESTIONIDs" integer[])
+ returns void
+ language plpgsql
+as $function$
+begin
+	delete
+from
+	public.test_questions
+where
+	test_id = $1;
+
+for i in 1.. array_length($2, 1) loop
+            insert
+	into
+	public.test_questions
+                (test_id,
+	question_id,
+	order_id)
+values
+                ($1,
+$2[i],
+coalesce((
+select
+	MAX(order_id)
+from
+	public.test_questions),
+0) + i);
+end loop;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_user(varchar, varchar, varchar, varchar, varchar);
+
+create or replace
+function public.add_user("NAME" character varying,
+"EMAIL" character varying,
+"PASSWORD" character varying,
+"COUNTRYCODE" character varying,
+"PHONENUMBER" character varying)
+ returns table("UserId" integer)
+ language plpgsql
+as $function$
+	declare 
+		user_id integer;
+
+begin
+		insert
+	into
+	public.users(name,
+	email,
+	password,
+	country_code,
+	phone_number)
+values($1,
+$2,
+pgp_sym_encrypt($3,
+'encryptingpassword',
+'compress-algo=1'),
+$4,
+$5)
+		returning id
+into
+	user_id
+		;
+
+return query
+		select
+	user_id;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_user(varchar, varchar, varchar, varchar, varchar, int4);
+
+create or replace
+function public.add_user("NAME" character varying,
+"EMAIL" character varying,
+"PASSWORD" character varying,
+"COUNTRYCODE" character varying,
+"PHONENUMBER" character varying,
+"PORTALID" integer)
+ returns table("UserId" integer)
+ language plpgsql
+as $function$
+	declare 
+		user_id integer;
+
+begin
+		insert
+	into
+	public.users(name,
+	email,
+	password,
+	country_code,
+	phone_number,
+	portal_id)
+values($1,
+$2,
+pgp_sym_encrypt($3,
+'encryptingpassword',
+'compress-algo=1'),
+$4,
+$5,
+$6)
+		returning id
+into
+	user_id
+		;
+
+return query
+		select
+	user_id;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_user_transaction(int4, varchar, varchar, varchar, varchar, varchar, varchar, varchar, bool, varchar, varchar, varchar, varchar, int4, varchar, varchar);
+
+create or replace
+function public.add_user_transaction("USERID" integer,
+"SUBSCRIPTION_ID" character varying,
+"STATUS" character varying,
+"REQUESTPAYLOAD" character varying,
+"RESPONSEPAYLOAD" character varying,
+"BANKALFALAHSUBSCRIPTIONID" character varying,
+"PROMOCODE" character varying,
+"IMAGEOFRECIEPT" character varying,
+"ISAPPROVED" boolean,
+"COUNTRY" character varying,
+"CURRENCY" character varying,
+"PHONE" character varying,
+"EMAIL" character varying,
+"PORTALID" integer,
+"REFERENCENUMBER" character varying,
+"LOCATION" character varying)
+ returns character varying
+ language plpgsql
+as $function$
+    declare
+        transaction_id_ varchar;
+
+begin
+        insert
+	into
+	public.user_transactions(
+            user_id,
+	subscription_id,
+	status,
+	request_payload,
+	response_payload,
+	bank_alfalah_subscription_id,
+			promocode_id,
+			image_url,
+			is_approved,
+			country,
+			currency,
+			phone,
+			email,
+			portal_id,
+			reference_number,
+			location
+        )
+values (
+            $1,
+            $2,
+            $3,
+            $4,
+            $5,
+            $6,
+            $7,
+            $8,
+            $9,
+            $10,
+            $11,
+            $12,
+            $13,
+			$14,
+			$15,
+			$16
+        )
+        returning id
+into
+	transaction_id_;
+
+if transaction_id_ is not null then
+			update
+	public.promo_codes
+set
+	temp_count = temp_count + 1
+where
+	id = $7;
+end if;
+
+return transaction_id_;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_user_transaction_alfalah(int4, varchar, varchar, varchar, varchar, varchar, int4, varchar, varchar, varchar, varchar, varchar, varchar, varchar);
+
+create or replace
+function public.add_user_transaction_alfalah("USERID" integer,
+"SUBSCRIPTION_ID" character varying,
+"STATUS" character varying,
+"RESPONSEPAYLOAD" character varying,
+"PROMOCODE" character varying,
+"PHONE" character varying,
+"PORTALID" integer,
+"ORDERID" character varying,
+"TRANSACTIONREFERENCENUMBER" character varying,
+"TRANSACTIONID" character varying,
+"TRANSACTIONAMOUNT" character varying,
+"TRANSACTIONDESCRIPTION" character varying,
+"TRANSACTIONSTATUS" character varying,
+"LOCATION" character varying)
+ returns table("TransactionID" character varying,
+"UTC" timestamp with time zone)
+ language plpgsql
+as $function$
+declare
+    transaction_id_ character varying;
+
+utc_time timestamptz;
+
+begin
+-- Insert data into user_transactions and retrieve the transaction ID
+    insert
+	into
+	public.user_transactions(
+        user_id,
+	subscription_id,
+	status,
+	response_payload,
+	promocode_id,
+	is_approved,
+	phone,
+	portal_id,
+	order_id,
+	transaction_reference_number,
+	transaction_id,
+	transaction_amount,
+	transaction_description,
+	transaction_status,
+	reference_number,
+	location
+    )
+values (
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        true,
+        $6,
+        $7,
+        $8,
+        $9,
+        $10,
+        $11,
+        $12,
+        $13,
+        public.generate_random_string(24),
+        $14
+    )
+    returning id
+into
+	transaction_id_;
+-- Update promo_codes if PROMOCODE is provided
+    if transaction_id_ is not null
+and $5 is not null then
+        update
+	public.promo_codes
+set
+	temp_count = temp_count - 1,
+	count = count - 1
+where
+	id = $5;
+end if;
+-- Check transaction status and update user subscription if 'Paid'
+    if $13 = 'Paid' then
+        update
+	public.users
+set
+	is_subscribed = true,
+	subscription_id = $2,
+	subscription_time = NOW()
+where
+	id = $1;
+-- Retrieve the updated UTC subscription time
+        select
+	transaction_id_,
+	((u.subscription_time + (s.days || ' days')::interval) at TIME zone 'UTC')::timestamptz
+into
+	transaction_id_,
+	utc_time
+from
+	public.users u
+left join public.subscriptions s on
+	u.subscription_id = s.id
+where
+	u.id = $1;
+else
+-- Set default null values if the transaction was not 'Paid'
+transaction_id_ := null;
+
+utc_time := null;
+end if;
+
+return QUERY
+select
+	transaction_id_,
+	utc_time;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_user_with_google(varchar, varchar, varchar, int4);
+
+create or replace
+function public.add_user_with_google("EMAIL" character varying,
+"NAME" character varying,
+"GOOGLEID" character varying,
+"PORTALID" integer)
+ returns table("Status" integer,
+"UserId" integer)
+ language plpgsql
+as $function$
+  declare
+	  user_info public.users;
+
+user_id integer;
+
+begin
+	  select
+	*
+into
+	user_info
+from
+	public.users
+where
+	email = $1
+	and portal_id = $4;
+
+if user_info is null then
+-- User does not exist, so insert a new user
+		  insert
+	into
+	public.users(email,
+	"name",
+	google_id,
+	is_email_verified,
+	portal_id)
+values ($1,
+$2,
+$3,
+true,
+$4) returning id
+into
+	user_id;
+
+return QUERY
+select
+	0 as "Status" ,
+	user_id;
+
+elsif user_info.google_id is null then
+-- User exists but google_id is null, update the user's information
+		  update
+	public.users
+set
+	google_id = $3,
+	is_email_verified = true
+where
+	email = $1;
+
+return QUERY
+select
+	1 as "Status" ,
+	user_info.id;
+else
+-- User exists and google_id is not null
+		  return QUERY
+select
+	2 as "Status";
+end if;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_user_with_google(varchar, varchar, varchar);
+
+create or replace
+function public.add_user_with_google("EMAIL" character varying,
+"NAME" character varying,
+"GOOGLEID" character varying)
+ returns table("Status" integer,
+"UserId" integer)
+ language plpgsql
+as $function$
+  declare
+	  user_info public.users;
+
+user_id integer;
+
+begin
+	  select
+	*
+into
+	user_info
+from
+	public.users
+where
+	email = $1;
+
+if user_info is null then
+-- User does not exist, so insert a new user
+		  insert
+	into
+	public.users(email,
+	"name",
+	google_id,
+	is_email_verified)
+values ($1,
+$2,
+$3,
+true) returning id
+into
+	user_id;
+
+return QUERY
+select
+	0 as "Status" ,
+	user_id;
+
+elsif user_info.google_id is null then
+-- User exists but google_id is null, update the user's information
+		  update
+	public.users
+set
+	google_id = $3,
+	is_email_verified = true
+where
+	email = $1;
+
+return QUERY
+select
+	1 as "Status" ,
+	user_info.id;
+else
+-- User exists and google_id is not null
+		  return QUERY
+select
+	2 as "Status";
+end if;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_vocab(varchar, varchar, int4, varchar);
+
+create or replace
+function public.add_vocab("NAME" character varying,
+"TYPE" character varying,
+"USERID" integer,
+"DESCRIPTION" character varying)
+ returns void
+ language plpgsql
+as $function$
+	begin
+		insert
+	into
+	public.vocab_bank("name",
+	type,
+	user_id,
+	description)
+values ($1 ,
+$2 ,
+$3 ,
+$4);
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_white_label_total_account(int4, varchar, int4, varchar);
+
+create or replace
+function public.add_white_label_total_account("PORTALID" integer,
+"PLANID" character varying,
+"TOTALACCOUNTS" integer,
+"LASTTRANSACTIONID" character varying)
+ returns integer
+ language plpgsql
+as $function$
+declare
+    white_label_total_account_id_ integer;
+
+begin
+-- Check if the record already exists
+    select
+	id
+into
+	white_label_total_account_id_
+from
+	public.white_label_total_accounts
+where
+	portal_id = $1
+	and plan_id = $2;
+
+if white_label_total_account_id_ is not null then
+-- If it exists, update the record
+        update
+	public.white_label_total_accounts
+set
+	total_accounts = total_accounts + $3,
+	last_white_label_transaction_id = $4
+where
+	id = white_label_total_account_id_;
+else
+-- If it doesn't exist, insert a new record
+        insert
+	into
+	public.white_label_total_accounts(
+            portal_id,
+	plan_id,
+	total_accounts,
+	last_white_label_transaction_id
+        )
+values ($1,
+$2,
+$3,
+$4)
+        returning id
+into
+	white_label_total_account_id_;
+end if;
+-- Return the ID of the inserted or updated record
+    return white_label_total_account_id_;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_whitelabel_transaction(int4, varchar, varchar, varchar, varchar, varchar, varchar, varchar, varchar, varchar, varchar, varchar, varchar, varchar, varchar, varchar, varchar, varchar, varchar, varchar, int4, varchar, varchar, varchar);
+
+create or replace
+function public.add_whitelabel_transaction("ADMINID" integer,
+"PLANID" character varying,
+"STATUS" character varying,
+"REQUESTPAYLOAD" character varying,
+"RESPONSEPAYLOAD" character varying,
+"BANKALFALAHSUBSCRIPTIONID" character varying,
+"PROMOCODE" character varying,
+"COUNTRY" character varying,
+"CURRENCY" character varying,
+"PHONE" character varying,
+"EMAIL" character varying,
+"ORDERID" character varying,
+"TRANSACTIONREFERENCENUMBER" character varying,
+"TRANSACTIONID" character varying,
+"TRANSACTIONAMOUNT" character varying,
+"TRANSACTIONDESCRIPTION" character varying,
+"TRANSACTIONSTATUS" character varying,
+"IMAGEOFRECIEPT" character varying,
+"NOOFACCOUNTSPURCHASED" character varying,
+"NOOFACCOUNTUSED" character varying,
+"PORTALID" integer,
+"AMOUNTPAID" character varying,
+"REFERENCENUMBER" character varying,
+"LOCATION" character varying)
+ returns character varying
+ language plpgsql
+as $function$
+    declare
+        transaction_id_ varchar;
+
+begin
+        insert
+	into
+	public.whitelabel_transactions(
+            admin_id,
+	plan_id,
+	status,
+	request_payload,
+	response_payload,
+	bank_alfalah_subscription_id,
+	promocode_id,
+	country,
+	currency,
+	phone,
+	email,
+	order_id,
+	transaction_reference_number,
+	transaction_id,
+	transaction_amount,
+	transaction_description,
+	transaction_status,
+	image_url,
+	no_of_accounts_purchased,
+	no_of_accounts_used,
+			portal_id,
+			amount_paid,
+			reference_number,
+			location
+        )
+values (
+            $1,
+            $2,
+            $3,
+            $4,
+            $5,
+            $6,
+            $7,
+            $8,
+            $9,
+            $10,
+            $11,
+            $12,
+            $13,
+            $14,
+            $15,
+            $16,
+            $17,
+            $18,
+            $19,
+            $20,
+			$21,
+			$22,
+			$23,
+			$24
+        )
+        returning id
+into
+	transaction_id_;
+-- Optionally, handle promocode update logic if needed
+        if transaction_id_ is not null then
+            if $7 is not null then
+                update
+	public.promo_codes
+set
+	temp_count = temp_count - 1,
+	count = count - 1
+where
+	id = $7;
+end if;
+end if;
+
+return transaction_id_;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.add_whitelabel_transaction_alfalah(int4, varchar, varchar, varchar, varchar, varchar, varchar, varchar, varchar, varchar, varchar, varchar, varchar, varchar, varchar, varchar, varchar, varchar, varchar, varchar, int4, varchar, varchar);
+
+create or replace
+function public.add_whitelabel_transaction_alfalah("ADMINID" integer,
+"PLANID" character varying,
+"STATUS" character varying,
+"REQUESTPAYLOAD" character varying,
+"RESPONSEPAYLOAD" character varying,
+"BANKALFALAHSUBSCRIPTIONID" character varying,
+"PROMOCODE" character varying,
+"COUNTRY" character varying,
+"CURRENCY" character varying,
+"PHONE" character varying,
+"EMAIL" character varying,
+"ORDERID" character varying,
+"TRANSACTIONREFERENCENUMBER" character varying,
+"TRANSACTIONID" character varying,
+"TRANSACTIONAMOUNT" character varying,
+"TRANSACTIONDESCRIPTION" character varying,
+"TRANSACTIONSTATUS" character varying,
+"IMAGEOFRECIEPT" character varying,
+"NOOFACCOUNTSPURCHASED" character varying,
+"NOOFACCOUNTUSED" character varying,
+"PORTALID" integer,
+"AMOUNTPAID" character varying,
+"LOCATION" character varying)
+ returns character varying
+ language plpgsql
+as $function$
+    declare
+        transaction_id_ varchar;
+
+begin
+        insert
+	into
+	public.whitelabel_transactions(
+            admin_id,
+	plan_id,
+	status,
+	request_payload,
+	response_payload,
+	bank_alfalah_subscription_id,
+	promocode_id,
+	country,
+	currency,
+	phone,
+	email,
+	order_id,
+	transaction_reference_number,
+	transaction_id,
+	transaction_amount,
+	transaction_description,
+	transaction_status,
+	image_url,
+	no_of_accounts_purchased,
+	no_of_accounts_used,
+			portal_id,
+			amount_paid,
+			reference_number,
+			location
+        )
+values (
+            $1,
+            $2,
+            $3,
+            $4,
+            $5,
+            $6,
+            $7,
+            $8,
+            $9,
+            $10,
+            $11,
+            $12,
+            $13,
+            $14,
+            $15,
+            $16,
+            $17,
+            $18,
+            $19,
+            $20,
+			$21,
+			$22,
+			public.generate_random_string(24),
+			$23
+        )
+        returning id
+into
+	transaction_id_;
+-- Optionally, handle promocode update logic if needed
+        if transaction_id_ is not null then
+            if $7 is not null then
+                update
+	public.promo_codes
+set
+	temp_count = temp_count - 1,
+	count = count - 1
+where
+	id = $7;
+end if;
+end if;
+
+if $17 = 'Paid' then 
+			perform public.add_white_label_total_account($21 ,
+$2 ,
+$19::integer,
+transaction_id_);
+end if;
+
+return transaction_id_;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.approve_admin_transaction(varchar);
+
+create or replace
+function public.approve_admin_transaction("TRANSACTIONID" character varying)
+ returns boolean
+ language plpgsql
+as $function$
+	declare 
+		rows_updated integer = 0;
+
+data_white_label_transaction public.whitelabel_transactions;
+
+plan_id_ character varying;
+
+begin
+		update
+	public.whitelabel_transactions
+set
+	is_approved = true ,
+	status = 'completed'
+where
+	id = $1;
+
+select
+	*
+into
+	data_white_label_transaction
+from
+	public.whitelabel_transactions
+where
+	id = $1;
+
+select
+	plan_id
+into
+	plan_id_
+from
+	public.bridge_paln_subplans bps
+where
+	bps.id = data_white_label_transaction.plan_id;
+
+perform public.add_white_label_total_account(
+    data_white_label_transaction.portal_id, 
+    plan_id_,
+    data_white_label_transaction.no_of_accounts_purchased::integer, 
+    $1
+);
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.approve_transaction(varchar);
+
+create or replace
+function public.approve_transaction("TRANSACTIONID" character varying)
+ returns boolean
+ language plpgsql
+as $function$
+	declare 
+		rows_updated integer = 0;
+
+data_transaction public.user_transactions;
+
+begin
+		select
+	*
+into
+	data_transaction
+from
+	public.user_transactions
+where
+	id = $1;
+-- Check if the transaction exists
+	    if not found then
+	        return false;
+end if;
+
+update
+	public.user_transactions
+set
+	is_approved = true ,
+	status = 'completed'
+where
+	id = $1;
+
+update
+	public.users
+set
+	is_subscribed = true,
+	subscription_id = data_transaction.subscription_id,
+	subscription_time = now()
+where
+	id = data_transaction.user_id;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.assign_account(int4, varchar, int4);
+
+create or replace
+function public.assign_account("PORTALID" integer,
+"PLANID" character varying,
+"USERID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare 
+		rows_updated integer = 0;
+
+white_label_total_accounts_ public.white_label_total_accounts;
+
+begin
+		select
+	*
+into
+	white_label_total_accounts_
+from
+	public.white_label_total_accounts
+where
+	portal_id = $1
+	and plan_id = $2;
+
+if white_label_total_accounts_.total_accounts > 0 then
+			update
+	public.users
+set
+	is_subscribed = true,
+	plan_id = $2
+where
+	id = $3;
+
+update
+	public.white_label_total_accounts
+set
+	total_accounts = total_accounts - 1
+where
+	plan_id = $2
+	and portal_id = $1;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return true;
+end if;
+
+return false;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.authenticate_user_with_auth(varchar, varchar);
+
+create or replace
+function public.authenticate_user_with_auth("EMAIL" character varying,
+"AUTHID" character varying)
+ returns table("Status" integer,
+"UserId" integer,
+"UserName" character varying,
+"Email" character varying,
+"CreatedAt" timestamp without time zone,
+"IsDeleted" boolean,
+"PhoneNumber" character varying,
+"CountryCode" character varying)
+ language plpgsql
+as $function$
+  declare
+	  user_info public.users;
+
+admin_name character varying;
+
+begin
+	  select
+	*
+into
+	user_info
+from
+	public.users
+where
+	email = $1
+	and is_deleted = false;
+
+if user_info is null then
+-- User credentials are wrong
+		  return QUERY
+select
+	0 as "Status",
+	null::integer as "UserId",
+	null::character varying as "UserName",
+							   null::character varying as "Email",
+	null::timestamp as "CreatedAt",
+	null::boolean as "IsDeleted" , 
+							   null::character varying as "PhoneNumber" ,
+	null::character varying as "CountryCode"
+							   ;
+else
+-- User exists, but email is not verified	
+	  	if user_info.google_id is not null
+and not user_info.google_id = $2 then
+		  return QUERY
+select
+	2 as "Status",
+	null::integer as "UserId",
+	null::character varying as "UserName",
+							   null::character varying as "Email",
+	null::timestamp as "CreatedAt",
+	null::boolean as "IsDeleted" , 
+							   null::character varying as "PhoneNumber" ,
+	null::character varying as "CountryCode"
+							   ;
+end if;
+
+if not user_info.is_email_verified then
+		  	update
+	public.users
+set
+	is_email_verified = true ,
+	google_id = $2
+where
+	id = user_info.id;
+end if;
+
+if user_info.google_id is null then
+		  	update
+	public.users
+set
+	google_id = $2
+where
+	id = user_info.id;
+end if;
+
+return QUERY
+select
+	1 as "Status",
+	user_info.id as "UserId",
+	user_info.name as "UserName",
+	user_info.email as "Email",
+							   user_info.created_at,
+	user_info.is_deleted ,
+	user_info.phone_number ,
+	user_info.country_code;
+end if;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.authenticate_user_with_auth(varchar, varchar, int4);
+
+create or replace
+function public.authenticate_user_with_auth("EMAIL" character varying,
+"AUTHID" character varying,
+"PORTALID" integer)
+ returns table("Status" integer,
+"UserId" integer,
+"UserName" character varying,
+"Email" character varying,
+"CreatedAt" timestamp without time zone,
+"IsDeleted" boolean,
+"PhoneNumber" character varying,
+"CountryCode" character varying)
+ language plpgsql
+as $function$
+  declare
+	  user_info public.users;
+
+admin_name character varying;
+
+begin
+	  select
+	*
+into
+	user_info
+from
+	public.users
+where
+	email = $1
+	and is_deleted = false
+	and portal_id = $3;
+
+if user_info is null then
+-- User credentials are wrong
+		  return QUERY
+select
+	0 as "Status",
+	null::integer as "UserId",
+	null::character varying as "UserName",
+							   null::character varying as "Email",
+	null::timestamp as "CreatedAt",
+	null::boolean as "IsDeleted" , 
+							   null::character varying as "PhoneNumber" ,
+	null::character varying as "CountryCode"
+							   ;
+else
+-- User exists, but email is not verified	
+	  	if user_info.google_id is not null
+and not user_info.google_id = $2 then
+		  return QUERY
+select
+	2 as "Status",
+	null::integer as "UserId",
+	null::character varying as "UserName",
+							   null::character varying as "Email",
+	null::timestamp as "CreatedAt",
+	null::boolean as "IsDeleted" , 
+							   null::character varying as "PhoneNumber" ,
+	null::character varying as "CountryCode"
+							   ;
+end if;
+
+if not user_info.is_email_verified then
+		  	update
+	public.users
+set
+	is_email_verified = true ,
+	google_id = $2
+where
+	id = user_info.id;
+end if;
+
+if user_info.google_id is null then
+		  	update
+	public.users
+set
+	google_id = $2
+where
+	id = user_info.id;
+end if;
+
+return QUERY
+select
+	1 as "Status",
+	user_info.id as "UserId",
+	user_info.name as "UserName",
+	user_info.email as "Email",
+							   user_info.created_at,
+	user_info.is_deleted ,
+	user_info.phone_number ,
+	user_info.country_code;
+end if;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.block_student_by_admin(int4);
+
+create or replace
+function public.block_student_by_admin("USERID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare 
+		rows_updated integer = 0;
+
+begin
+		update
+	public.users
+set
+	is_deleted = not is_deleted
+where
+	id = $1;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.block_subscription_by_admin(varchar);
+
+create or replace
+function public.block_subscription_by_admin("SUBSCRIPTIONID" character varying)
+ returns boolean
+ language plpgsql
+as $function$
+	declare 
+		rows_updated integer = 0;
+
+begin
+		update
+	public.subscriptions
+set
+	inactive = not inactive
+where
+	id = $1;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.check_admin(int4);
+
+create or replace
+function public.check_admin("ADMINID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+begin
+-- Check if the user exists in public.users table
+    if exists (
+select
+	1
+from
+	public.admins
+where
+	id = $1) then
+        return true;
+else
+        return false;
+end if;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.check_admin_permission(int4, varchar);
+
+create or replace
+function public.check_admin_permission("ADMINID" integer,
+"PERMISSIONID" character varying)
+ returns boolean
+ language plpgsql
+as $function$
+	begin
+-- Check if the user exists in public.users table
+    if exists (
+select
+	1
+from
+	public.permissions_admin pd
+where
+	pd.admin_id = $1
+	and pd.permission_id = $2) then
+        return true;
+else
+        return false;
+end if;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.check_and_subtract_promocode_validity(varchar, int4);
+
+create or replace
+function public.check_and_subtract_promocode_validity("PROMOCODEID" character varying,
+"USERID" integer)
+ returns table("Percentage" integer,
+"FixedAmount" integer)
+ language plpgsql
+as $function$
+declare 
+	percentage_ integer;
+
+fixedamount_ integer;
+
+begin
+    select
+	percentage,
+	fixed_amount
+into
+	percentage_,
+	fixedamount_
+from
+	public.promo_codes
+where
+	id = $1
+	and active = true
+	and (user_id = $2
+		or user_id is null)
+	and count - temp_count > 0;
+
+if percentage_ is not null
+or fixedamount_ is not null then
+		update
+	public.promo_codes
+set
+	temp_count = temp_count + 1
+where
+	id = $1;
+end if;
+
+return query
+	select
+	percentage_,
+	fixedamount_;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.check_user(varchar);
+
+create or replace
+function public.check_user("Email" character varying)
+ returns boolean
+ language plpgsql
+as $function$
+begin
+-- Check if the user exists in public.users table
+    if exists (
+select
+	1
+from
+	public.users
+where
+	email = $1) then
+        return true;
+else
+        return false;
+end if;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.count_of_promocode_used(varchar);
+
+create or replace
+function public.count_of_promocode_used("PROMOCODEID" character varying)
+ returns table("Users Usage" integer,
+"Portals Usage" integer)
+ language plpgsql
+as $function$
+declare
+	users_ integer;
+
+portals_ integer;
+
+begin
+
+    select
+	count(*)::integer
+into
+	users_
+from
+	public.user_transactions
+where
+	promocode_id = $1;
+
+select
+	count(*)::integer
+into
+	portals_
+from
+	public.whitelabel_transactions
+where
+	promocode_id = $1;
+
+return QUERY
+	select
+	users_,
+	portals_;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_admin(int4);
+
+create or replace
+function public.delete_admin("ADMINID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare
+    row_deleted integer := 0;
+
+begin
+		delete
+from
+	public.admins
+where
+	id = $1;
+
+get diagnostics row_deleted = ROW_COUNT;
+
+return row_deleted > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_appeared_question(int4, int4);
+
+create or replace
+function public.delete_appeared_question("APPEAREDQUESTIONID" integer,
+"USERID" integer)
+ returns integer
+ language plpgsql
+as $function$
+	declare
+    row_deleted integer := 0;
+
+begin
+		if exists (
+select
+	1
+from
+	public.appeared_questions aq
+where
+	aq.id = $1) then 
+			if exists (
+select
+	1
+from
+	public.appeared_questions aq
+where
+	aq.id = $1
+	and aq.user_id = $2) then
+				delete
+from
+	public.appeared_questions
+where
+	id = $1;
+
+return 1;
+else
+				return -1;
+end if;
+end if;
+
+return 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_attempted_question(int4);
+
+create or replace
+function public.delete_attempted_question("ATTEMPTED_QUESTION_ID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare
+    row_deleted integer := 0;
+
+begin
+		delete
+from
+	public.attempted_questions
+where
+	id = $1;
+
+get diagnostics row_deleted = ROW_COUNT;
+
+return row_deleted > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_attempted_question_like(int4, int4);
+
+create or replace
+function public.delete_attempted_question_like("USERID" integer,
+"ATTEMPTEDQUESTIONID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare
+    row_deleted integer := 0;
+
+begin
+		delete
+from
+	public.attempted_questions_likes
+where
+	user_id = $1
+	and attempted_question_id = $2;
+
+get diagnostics row_deleted = ROW_COUNT;
+
+return row_deleted > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_attempted_questions_comment(int4);
+
+create or replace
+function public.delete_attempted_questions_comment("COMMENTID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare
+    row_deleted integer := 0;
+
+begin
+		delete
+from
+	public.attempted_questions_comments
+where
+	id = $1;
+
+get diagnostics row_deleted = ROW_COUNT;
+
+return row_deleted > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_attempted_questions_comment_like(int4, int4);
+
+create or replace
+function public.delete_attempted_questions_comment_like("USERID" integer,
+"ATTEMPTEDQUESTIONCOMMENTID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare
+    row_deleted integer := 0;
+
+begin
+		delete
+from
+	public.attempted_questions_comment_likes
+where
+	user_id = $1
+	and attempted_questions_comment_id = $2;
+
+get diagnostics row_deleted = ROW_COUNT;
+
+return row_deleted > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_bookmark(int4);
+
+create or replace
+function public.delete_bookmark("BOOKMARKID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare
+    row_deleted integer := 0;
+
+begin
+		delete
+from
+	public.bookmarks
+where
+	id = $1;
+
+get diagnostics row_deleted = ROW_COUNT;
+
+return row_deleted > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_comment(int4);
+
+create or replace
+function public.delete_comment("COMMENTID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare
+    row_deleted integer := 0;
+
+begin
+		delete
+from
+	public.comments
+where
+	id = $1;
+
+get diagnostics row_deleted = ROW_COUNT;
+
+return row_deleted > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_comment_like(int4, int4);
+
+create or replace
+function public.delete_comment_like("USERID" integer,
+"COMMENTID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare
+    row_deleted integer := 0;
+
+begin
+		delete
+from
+	public.comment_likes
+where
+	user_id = $1
+	and comment_id = $2;
+
+get diagnostics row_deleted = ROW_COUNT;
+
+return row_deleted > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_mock_attempted_development(int4);
+
+create or replace
+function public.delete_mock_attempted_development("USERID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare
+    row_deleted integer := 0;
+
+begin
+		delete
+from
+	public.mock_attempted_questions
+where
+	user_id = $1;
+
+delete
+from
+	public.mock_test_attempts
+where
+	user_id = $1;
+
+get diagnostics row_deleted = ROW_COUNT;
+
+return row_deleted > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_mock_test(int4);
+
+create or replace
+function public.delete_mock_test("MOCKTESTID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare
+    row_deleted integer := 0;
+
+begin
+		delete
+from
+	public.mock_test
+where
+	id = $1;
+
+get diagnostics row_deleted = ROW_COUNT;
+
+return row_deleted > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_mock_test_attempt(int4);
+
+create or replace
+function public.delete_mock_test_attempt("MOCKTESTATTEMPTID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare
+    row_deleted1 integer := 0;
+
+row_deleted2 integer := 0;
+
+begin
+		delete
+from
+	public.mock_attempted_questions
+where
+	mock_test_attempt_id = $1;
+
+get diagnostics row_deleted1 = ROW_COUNT;
+--    	if( row_deleted1 > 0) then
+			delete
+from
+	public.mock_test_attempts
+where
+	id = $1;
+
+get diagnostics row_deleted2 = ROW_COUNT;
+
+return row_deleted2 > 0;
+--    	end if;		
+--    	return false;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_mock_test_questions_by_test_id(int4);
+
+create or replace
+function public.delete_mock_test_questions_by_test_id("MOCKTESTID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare
+    row_deleted integer := 0;
+
+begin
+		delete
+from
+	public.mock_test_questions
+where
+	mock_test_id = $1;
+
+get diagnostics row_deleted = ROW_COUNT;
+
+return row_deleted > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_option(int4);
+
+create or replace
+function public.delete_option("OPTIONID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare
+    row_deleted integer := 0;
+
+begin
+		delete
+from
+	public.options
+where
+	id = $1;
+
+get diagnostics row_deleted = ROW_COUNT;
+
+return row_deleted > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_portal(int4);
+
+create or replace
+function public.delete_portal("PORTALID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare
+    row_deleted integer := 0;
+
+begin
+		delete
+from
+	public.portal
+where
+	id = $1;
+
+get diagnostics row_deleted = ROW_COUNT;
+
+return row_deleted > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_prediction_file(int4);
+
+create or replace
+function public.delete_prediction_file("FILEID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare
+    row_deleted integer := 0;
+
+begin
+		delete
+from
+	public.prediction_file
+where
+	id = $1;
+
+get diagnostics row_deleted = ROW_COUNT;
+
+return row_deleted > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_question(int4);
+
+create or replace
+function public.delete_question("QUESTIONID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare
+    row_deleted integer := 0;
+
+begin
+		delete
+from
+	public.question
+where
+	id = $1;
+
+get diagnostics row_deleted = ROW_COUNT;
+
+return row_deleted > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_strategy_video(int4);
+
+create or replace
+function public.delete_strategy_video("VIDEOID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+declare
+	row_deleted integer := 0;
+
+begin
+	delete
+from
+	public.strategy_video
+where
+	id = $1;
+
+get diagnostics row_deleted = ROW_COUNT;
+
+return row_deleted > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_subscription(varchar);
+
+create or replace
+function public.delete_subscription("SUBSCRIPTION_ID" character varying)
+ returns boolean
+ language plpgsql
+as $function$
+	declare
+		row_deleted integer := 0;
+
+begin
+		delete
+from
+	public.subscriptions
+where
+	id = $1;
+
+get diagnostics row_deleted = ROW_COUNT;
+
+return row_deleted > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_template_grammar_pdf(int4);
+
+create or replace
+function public.delete_template_grammar_pdf("TEMPLATEID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare
+    row_deleted integer := 0;
+
+begin
+		delete
+from
+	public.templates_and_grammar_pdfs
+where
+	id = $1;
+
+get diagnostics row_deleted = ROW_COUNT;
+
+return row_deleted > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_test(int4);
+
+create or replace
+function public.delete_test("TESTID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare
+    row_deleted integer := 0;
+
+begin
+		delete
+from
+	public.test
+where
+	id = $1;
+
+get diagnostics row_deleted = ROW_COUNT;
+
+return row_deleted > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_test_category(int4);
+
+create or replace
+function public.delete_test_category("TESTCATEGORYID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare
+    row_deleted integer := 0;
+
+begin
+		delete
+from
+	public.test_categories
+where
+	id = $1;
+
+get diagnostics row_deleted = ROW_COUNT;
+
+return row_deleted > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_test_question_note_of_user(int4);
+
+create or replace
+function public.delete_test_question_note_of_user("NOTEID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare
+    row_deleted integer := 0;
+
+begin
+		delete
+from
+	public.test_question_notes
+where
+	id = $1;
+
+get diagnostics row_deleted = ROW_COUNT;
+
+return row_deleted > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_test_questions_by_test_id(int4);
+
+create or replace
+function public.delete_test_questions_by_test_id("TESTID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare
+    row_deleted integer := 0;
+
+begin
+		delete
+from
+	public.test_questions
+where
+	test_id = $1;
+
+get diagnostics row_deleted = ROW_COUNT;
+
+return row_deleted > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_user(int4, bool);
+
+create or replace
+function public.delete_user("USERID" integer,
+"ISDELETED" boolean)
+ returns boolean
+ language plpgsql
+as $function$
+	declare 
+		  rows_updated integer = 0;
+
+begin
+		  update
+	public.users
+set 
+			is_deleted = $2
+where
+	id = $1;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_user_permanently(int4);
+
+create or replace
+function public.delete_user_permanently("USERID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare
+    row_deleted integer := 0;
+
+begin
+		delete
+from
+	public.users
+where
+	id = $1;
+
+get diagnostics row_deleted = ROW_COUNT;
+
+return row_deleted > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_user_transaction(varchar);
+
+create or replace
+function public.delete_user_transaction("TRANSACTION_ID" character varying)
+ returns boolean
+ language plpgsql
+as $function$
+    declare
+        row_deleted integer := 0;
+
+begin
+        delete
+from
+	public.user_transactions
+where
+	id = $1;
+
+get diagnostics row_deleted = ROW_COUNT;
+
+return row_deleted > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.delete_vocab(int4);
+
+create or replace
+function public.delete_vocab("VOCABID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare
+    row_deleted integer := 0;
+
+begin
+		delete
+from
+	public.vocab_bank
+where
+	id = $1;
+
+get diagnostics row_deleted = ROW_COUNT;
+
+return row_deleted > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_admin_transactions(int4);
+
+create or replace
+function public.get_admin_transactions("ADMINID" integer)
+ returns setof whitelabel_transactions
+ language plpgsql
+as $function$
+    begin
+        return QUERY
+        select
+	*
+from
+	public.whitelabel_transactions
+where
+	admin_id = $1
+order by
+	created_at
+		;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_all_admins();
+
+create or replace
+function public.get_all_admins()
+ returns table("Id" integer,
+"Email" character varying,
+"Name" character varying,
+"Role" character varying,
+"CreatedAt" timestamp without time zone,
+"UpdatedAt" timestamp without time zone)
+ language plpgsql
+as $function$
+	begin
+		return query
+		select
+	id ,
+	email ,
+	"name" ,
+	role,
+	created_at ,
+	updated_at
+from
+	public.admins;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_all_categorized_tests();
+
+create or replace
+function public.get_all_categorized_tests()
+ returns table("Categories" json)
+ language plpgsql
+as $function$
+	begin
+		return query
+		select
+	json_agg(item) as categories
+from
+	(
+	select
+		t.category_id,
+		tc.category_name, 
+		         array_agg(json_build_object('subcategory_id',
+		t.id,
+		'subcategory_name',
+		t.test_name)) as subcategories
+	from
+		test t
+	left join public.test_categories tc 
+		  on
+		t.category_id = tc.id
+	group by
+		t.category_id ,
+		tc.category_name
+		) item;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_all_mock_tests(int4);
+
+create or replace
+function public.get_all_mock_tests("MOCKTESTTYPEID" integer)
+ returns table("MockTestId" integer,
+"MockTestName" character varying,
+"CreatedAt" timestamp without time zone,
+"UpdatedAt" timestamp without time zone,
+"TotalTime" integer,
+"TotalQuestions" integer,
+"ISPTECORE" boolean,
+"IndividualTimes" text)
+ language plpgsql
+as $function$
+ begin
+        return query
+        select
+	mt.id,
+	mt.name,
+	mt.created_at,
+	mt.updated_at,
+	mt.total_time,
+	coalesce((
+	select
+		count(*)
+	from
+		public.mock_test_questions mtq
+	where
+		mtq.mock_test_id = mt.id))::integer as TotalQuestions,
+	mt.core,
+	mt.individual_times
+from
+	public.mock_test mt
+where
+	case
+		when $1 is null then mt.mock_test_type_id is null
+		else mt.mock_test_type_id = $1
+	end
+order by
+	mt.order_id desc
+        ;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_all_mock_tests_for_user(int4, bool, int4);
+
+create or replace
+function public.get_all_mock_tests_for_user("USERID" integer,
+"ISPTECORE" boolean,
+"MOCKTESTID" integer)
+ returns table("MockTestId" integer,
+"MockTestName" character varying,
+"CreatedAt" timestamp without time zone,
+"UpdatedAt" timestamp without time zone,
+"TotalTime" integer,
+"TotalQuestions" integer,
+"ResumeTestId" integer,
+"IndividualTimes" text)
+ language plpgsql
+as $function$
+begin
+    return QUERY
+    select
+	mt.id as "MockTestId",
+	mt.name as "MockTestName",
+	mt.created_at as "CreatedAt",
+	mt.updated_at as "UpdatedAt",
+	mt.total_time as "TotalTime",
+	coalesce((
+	select
+		COUNT(*)
+	from
+		public.mock_test_questions mtq
+	where
+		mtq.mock_test_id = mt.id
+        ),
+	0)::int4 as "TotalQuestions",
+	(
+	select
+		mta.id
+	from
+		mock_test_attempts mta
+	where
+		mt.id = mta.mock_test_id
+		and mta.user_id = $1
+		and mta.status = 'pending'
+	limit 1
+        ) as "ResumeTestId",
+	mt.individual_times as "IndividualTimes"
+	-- Adding the individual_times column
+from
+	public.mock_test mt
+where
+	mt.core = $2
+	and (
+            case
+		when $3 is null then mt.mock_test_type_id is null
+		else mt.mock_test_type_id = $3
+	end
+        )
+order by
+	mt.id asc;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_all_options();
+
+create or replace
+function public.get_all_options()
+ returns table("OptionId" integer,
+"OptionNames" character varying,
+"AnswerNames" character varying,
+"QuestionId" integer,
+"CreatedAt" timestamp without time zone,
+"UpdatedAt" timestamp without time zone)
+ language plpgsql
+as $function$
+	begin
+		return query
+		select 
+		id,
+		option_names,
+		answer_names,
+		question_id,
+		created_at,
+		updated_at
+from
+	public.options;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_all_permissions();
+
+create or replace
+function public.get_all_permissions()
+ returns jsonb
+ language plpgsql
+as $function$
+	begin
+		return (
+select
+	json_agg(main_type_obj
+order by
+	main_type_obj.main_type_id) as result
+from
+	(
+	select
+		pm.id as main_type_id,
+		pm.main_type_name,
+		json_object_agg(ps.sub_type_name,
+		sub_type_permissions
+	order by
+		ps.id) as sub_types
+	from
+		(
+		select
+			p.main_type,
+			p.sub_type,
+			json_agg(json_build_object(
+                   'id',
+			p.id,
+			'name',
+			p.name,
+			'created_at',
+			p.created_at
+               )
+		order by
+			p.id) as sub_type_permissions
+		from
+			public.permissions p
+		group by
+			p.main_type,
+			p.sub_type
+    ) as grouped_permissions
+	join public.permission_main_type pm on
+		grouped_permissions.main_type = pm.id
+	join public.permission_sub_types ps on
+		grouped_permissions.sub_type = ps.id
+	group by
+		pm.id,
+		pm.main_type_name
+) as main_type_obj
+);
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_all_portal_admins(int4);
+
+create or replace
+function public.get_all_portal_admins("PORTALID" integer)
+ returns table("Id" integer,
+"Email" character varying,
+"Name" character varying,
+"Role" character varying,
+"Location" character varying,
+"CreatedAt" timestamp without time zone,
+"UpdatedAt" timestamp without time zone)
+ language plpgsql
+as $function$
+	begin
+		return query
+		select
+	id ,
+	email ,
+	"name" ,
+	role,
+	location,
+	created_at ,
+	updated_at
+from
+	public.admins
+where
+	portal_id = $1
+		;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_all_portals();
+
+create or replace
+function public.get_all_portals()
+ returns table("PortalId" integer,
+"PortalLink" character varying,
+"PortalOwnerName" character varying,
+"Location" character varying,
+"CreatedAt" timestamp without time zone)
+ language plpgsql
+as $function$
+	begin
+		return query
+		select 
+			id,
+			portal_link,
+			portal_owner_name,
+			location,
+			created_at
+from
+	public.portal;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_all_prediction_files(bool);
+
+create or replace
+function public.get_all_prediction_files("CORE" boolean)
+ returns table("FileId" integer,
+"Name" character varying,
+"FileUrl" character varying,
+"Priority" integer,
+"CreatedAt" timestamp without time zone,
+"UpdatedAt" timestamp without time zone)
+ language plpgsql
+as $function$
+	begin
+		return query
+		select
+	id,
+	name,
+	file_url,
+	priority,
+	created_at,
+	updated_at
+from
+	public.prediction_file
+where
+	core = $1;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_all_promo_codes();
+
+create or replace
+function public.get_all_promo_codes()
+ returns table("Id" character varying,
+"Percentage" integer,
+"Created_at" timestamp without time zone,
+"Updated_at" timestamp without time zone,
+"Active" boolean,
+"User_id" integer,
+"Fixed_amount" integer,
+"Portal_id" integer,
+"Count" integer,
+"Temp_count" integer,
+"Expiry_date" timestamp without time zone,
+"Expired" boolean)
+ language plpgsql
+as $function$
+begin
+    return QUERY
+    select
+	id,
+	percentage,
+	created_at,
+	updated_at,
+	active,
+	user_id,
+	fixed_amount,
+	portal_id,
+	count,
+	temp_count,
+	expiry_date,
+	case
+		when expiry_date < NOW() then true
+		else false
+	end as "expired"
+from
+	public.promo_codes;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_all_questions(int4, int4);
+
+create or replace
+function public.get_all_questions("PAGE" integer,
+"PAGESIZE" integer)
+ returns table("QuestionId" integer,
+"NAME" character varying,
+"Statement" character varying,
+"AudioObject" character varying,
+"TotalMarks" integer,
+"CreatedAt" timestamp without time zone,
+"UpdatedAt" timestamp without time zone,
+"MajorAspects" character varying,
+"MinorAspects" character varying,
+"OptionId" integer,
+"OptionNames" character varying,
+"AnswerNames" character varying,
+"OptionCreatedAt" timestamp without time zone,
+"OptionUpdatedAt" timestamp without time zone,
+"Category" character varying,
+"SubCategory" character varying,
+"Prediction" boolean)
+ language plpgsql
+as $function$
+	begin
+		return query
+		select
+	q.id,
+	q."name",
+	q."statement",
+	q.audio_object ,
+	q.total_marks,
+	q.created_at,
+	q.updated_at,
+	q.major_aspects,
+	q.minor_aspects,
+		o.id,
+		o.option_names,
+		o.answer_names,
+		o.created_at,
+		o.updated_at,
+		tc.category_name,
+		t.test_name,
+		q.prediction
+from
+	public.question q
+left join public.options o
+		on
+	o.question_id = q.id
+left join public.test t
+		on
+	q.test_id = t.id
+left join public.test_categories tc
+		on
+	t.category_id = tc.id
+order by
+	q.created_at
+limit $1 offset $2
+		;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_all_strategy_videos(bool);
+
+create or replace
+function public.get_all_strategy_videos("CORE" boolean)
+ returns table("Id" integer,
+"Title" character varying,
+"Author" character varying,
+"YtLink" character varying,
+"Category" character varying,
+"Priority" integer,
+"Language" character varying,
+"Core" boolean,
+"Thumbnail" character varying,
+"CreatedAt" timestamp without time zone,
+"UpdatedAt" timestamp without time zone)
+ language plpgsql
+as $function$
+begin
+	return QUERY
+	select
+		id,
+		title,
+		author,
+		yt_link,
+		category,
+		priority,
+		"language",
+		core,
+		thumbnail,
+		created_at,
+		updated_at
+from
+		public.strategy_video
+where
+	core = $1;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_all_students_by_super_admin(int4, varchar, bool, varchar);
+
+create or replace
+function public.get_all_students_by_super_admin("PORTALID" integer,
+"NAME" character varying,
+"SUBSCRIBED" boolean,
+"TYPE" character varying)
+ returns table("Id" integer,
+"Email" character varying,
+"Name" character varying,
+"CreatedAt" timestamp without time zone,
+"UpdatedAt" timestamp without time zone,
+"Type" character varying,
+"IsSubscribed" boolean)
+ language plpgsql
+as $function$
+	begin
+		return query
+		select
+	id,
+	email,
+	"name",
+	created_at,
+	updated_at,
+	type,
+	is_subscribed
+from
+	public.users
+where
+	portal_id = $1
+	and ("name" ilike $2
+		or $2 is null)
+	and (is_subscribed = $3
+		or $3 is null)
+	and (type ilike $4
+		or $4 is null);
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_all_subscriptions();
+
+create or replace
+function public.get_all_subscriptions()
+ returns table("Id" character varying,
+"Name" character varying,
+"Description" character varying,
+"PricePKR" integer,
+"CreatedAt" timestamp without time zone,
+"UpdatedAt" timestamp without time zone,
+"InActive" boolean,
+"Days" integer,
+"Discount" character varying)
+ language plpgsql
+as $function$
+	begin
+		return query
+		select
+	id,
+	"name",
+	"desc",
+	price_pkr,
+	created_at,
+	updated_at ,
+	inactive,
+	days,
+	discount
+from
+	public.subscriptions
+order by
+	days asc;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_all_templates(bool);
+
+create or replace
+function public.get_all_templates("ISTEMPLATE" boolean)
+ returns table("TemplateId" integer,
+"Name" character varying,
+"PdfUrl" character varying,
+"CreatedAt" timestamp without time zone,
+"UpdatedAt" timestamp without time zone)
+ language plpgsql
+as $function$
+	begin
+		return query
+		select
+	id,
+	name,
+	pdf_url,
+	created_at,
+	updated_at
+from
+	public.templates_and_grammar_pdfs
+where
+	is_template = $1;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_all_templates_of_portal(bool, int4);
+
+create or replace
+function public.get_all_templates_of_portal("ISTEMPLATE" boolean,
+"PORTALID" integer)
+ returns table("TemplateId" integer,
+"Name" character varying,
+"PdfUrl" character varying,
+"CreatedAt" timestamp without time zone,
+"UpdatedAt" timestamp without time zone)
+ language plpgsql
+as $function$
+declare
+	template_visible_ boolean;
+
+grammar_visible_ boolean;
+
+begin
+	select 
+		template_visible,
+		grammar_visible
+	into 
+		template_visible_,
+		grammar_visible_
+from
+	public.portal
+where
+	id = $2;
+
+return query
+		select
+	id,
+	name,
+	pdf_url,
+	created_at,
+	updated_at
+from
+	public.templates_and_grammar_pdfs
+where 
+			is_template = $1
+	and (
+				portal_id = $2
+		or (template_visible_
+			and portal_id = 1)
+		or (grammar_visible_
+			and portal_id = 1)
+			);
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_all_test_categories();
+
+create or replace
+function public.get_all_test_categories()
+ returns table("TestCategoryId" integer,
+"CategoryName" character varying,
+"CreatedAt" timestamp without time zone,
+"UpdatedAt" timestamp without time zone)
+ language plpgsql
+as $function$
+	begin
+		return query
+		select
+	id,
+	category_name,
+	created_at,
+	updated_at
+from
+	public.test_categories
+order by
+	order_id;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_all_tests();
+
+create or replace
+function public.get_all_tests()
+ returns table("TestId" integer,
+"CategoryId" integer,
+"TestName" character varying,
+"IsAnswerFixed" boolean,
+"CreatedAt" timestamp without time zone,
+"UpdatedAt" timestamp without time zone,
+"BeginningTime" integer,
+"TotalTime" integer,
+"CategoryName" character varying)
+ language plpgsql
+as $function$
+	begin
+		return query
+		select
+	t.id,
+	t.category_id,
+	t.test_name,
+	t.is_answer_fixed,
+	t.created_at,
+	t.updated_at,
+	t.beginning_time,
+	t.total_time ,
+	tc.category_name
+from
+	public.test t
+left join public.test_categories tc
+		on
+	t.category_id = tc.id
+		;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_all_user_transactions(int4, int4, bool, varchar);
+
+create or replace
+function public.get_all_user_transactions("PAGESIZE" integer,
+"OFFSET" integer,
+"ISAPPROVED" boolean,
+"REFERENCENUMBER" character varying)
+ returns table("TransactionId" character varying,
+"UserId" integer,
+"SubscriptionId" character varying,
+"Status" character varying,
+"RequestPayload" character varying,
+"ResponsePayload" character varying,
+"BankAlfalahSubscriptionId" character varying,
+"CreatedAt" timestamp without time zone,
+"UpdatedAt" timestamp without time zone,
+"PromocodeId" character varying,
+"TransactionImageUrl" character varying,
+"IsApproved" boolean,
+"Country" character varying,
+"Currency" character varying,
+"Phone" character varying,
+"Email" character varying,
+"TransactionPortalId" integer,
+"PortalName" character varying,
+"Username" character varying,
+"ReferenceNumber" character varying,
+"TranactionAmount" character varying)
+ language plpgsql
+as $function$
+begin
+    return QUERY
+    select
+	ut.id as transaction_id,
+	ut.user_id,
+	ut.subscription_id,
+	ut.status,
+	ut.request_payload,
+	ut.response_payload,
+	ut.bank_alfalah_subscription_id,
+	ut.created_at,
+	ut.updated_at,
+	ut.promocode_id,
+	ut.image_url as transaction_image_url,
+	ut.is_approved,
+	ut.country,
+	ut.currency,
+	ut.phone,
+	ut.email,
+	ut.portal_id as transaction_portal_id,
+	p.portal_owner_name as portal_name,
+	u.name as username,
+		ut.reference_number,
+		ut.transaction_amount
+from
+	public.user_transactions ut
+inner join 
+        public.users u on
+	ut.user_id = u.id
+left join 
+        public.portal p on
+	u.portal_id = p.id
+where
+	ut.is_approved = $3
+	and (ut.reference_number ilike $4
+		or $4 is null)
+order by
+	ut.created_at
+limit $1 offset $2;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_all_users();
+
+create or replace
+function public.get_all_users()
+ returns table("Id" integer,
+"Email" character varying,
+"Name" character varying,
+"CreatedAt" timestamp without time zone,
+"UpdatedAt" timestamp without time zone,
+"IsEmailVerified" boolean,
+"IsDeleted" boolean,
+"PhoneNumber" character varying,
+"CountryCode" character varying)
+ language plpgsql
+as $function$
+	begin
+		return query
+		select
+	id ,
+	email ,
+	"name" ,
+	created_at ,
+	updated_at ,
+	is_email_verified,
+	is_deleted ,
+	phone_number,
+	country_code
+from
+	public.users;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_all_vocabs(int4);
+
+create or replace
+function public.get_all_vocabs("USERID" integer)
+ returns table("Id" integer,
+"Name" character varying,
+"Type" character varying,
+"CreatedAt" timestamp without time zone,
+"UpdatedAt" timestamp without time zone,
+"Description" character varying)
+ language plpgsql
+as $function$
+	begin
+		return query
+		select
+	id ,
+	"name" ,
+	type,
+	created_at ,
+	updated_at ,
+	description
+from
+	public.vocab_bank
+where
+	user_id = $1
+order by
+	created_at desc
+		;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_all_white_label_total_accounts(int4);
+
+create or replace
+function public.get_all_white_label_total_accounts("PORTALID" integer)
+ returns table("Plan" character varying,
+"Details" json)
+ language plpgsql
+as $function$
+begin
+    return QUERY
+    select
+	p."name",
+	json_agg(
+            json_build_object(
+				'PlanID',
+	p.id,
+	'Plan' ,
+	p.plan,
+	'AccountsRemaining',
+	coalesce(w.total_accounts,
+	0),
+	'LastWhiteLabelTransactionId',
+	w.last_white_label_transaction_id
+            )
+        ) as details
+from
+	public.plans_for_whitelabels p
+left join 
+        public.white_label_total_accounts w 
+        on
+	p.id = w.plan_id
+	and w.portal_id = $1
+group by
+	p."name";
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_all_whitelabel_transactions(int4, int4, bool, varchar);
+
+create or replace
+function public.get_all_whitelabel_transactions("PAGESIZE" integer,
+"OFFSET" integer,
+"ISAPPROVED" boolean,
+"REFERENCENUMBER" character varying)
+ returns table("TransactionId" character varying,
+"AdminId" integer,
+"PortalId" integer,
+"PlanId" character varying,
+"Status" character varying,
+"RequestPayload" character varying,
+"ResponsePayload" character varying,
+"BankAlfalahSubscriptionId" character varying,
+"PromocodeId" character varying,
+"Country" character varying,
+"Currency" character varying,
+"Phone" character varying,
+"Email" character varying,
+"OrderId" character varying,
+"TransactionReferenceNumber" character varying,
+"TransactionIdOriginal" character varying,
+"TransactionAmount" character varying,
+"TransactionDescription" character varying,
+"TransactionStatus" character varying,
+"CreatedAt" timestamp without time zone,
+"UpdatedAt" timestamp without time zone,
+"ImageUrl" character varying,
+"IsApproved" boolean,
+"NoOfAccountsPurchased" character varying,
+"NoOfAccountsUsed" character varying,
+"PortalName" character varying,
+"AdminName" character varying,
+"ReferenceNumber" character varying)
+ language plpgsql
+as $function$
+begin
+    return QUERY
+    select
+	wt.id as "TransactionId",
+	wt.admin_id as "AdminId",
+	wt.portal_id as "PortalId",
+	wt.plan_id as "PlanId",
+	wt.status as "Status",
+	wt.request_payload as "RequestPayload",
+	wt.response_payload as "ResponsePayload",
+	wt.bank_alfalah_subscription_id as "BankAlfalahSubscriptionId",
+	wt.promocode_id as "PromocodeId",
+	wt.country as "Country",
+	wt.currency as "Currency",
+	wt.phone as "Phone",
+	wt.email as "Email",
+	wt.order_id as "OrderId",
+	wt.transaction_reference_number as "TransactionReferenceNumber",
+	wt.transaction_id as "TransactionIdOriginal",
+	wt.transaction_amount as "TransactionAmount",
+	wt.transaction_description as "TransactionDescription",
+	wt.transaction_status as "TransactionStatus",
+	wt.created_at as "CreatedAt",
+	wt.updated_at as "UpdatedAt",
+	wt.image_url as "ImageUrl",
+	wt.is_approved as "IsApproved",
+	wt.no_of_accounts_purchased as "NoOfAccountsPurchased",
+	wt.no_of_accounts_used as "NoOfAccountsUsed",
+	p.portal_owner_name as "PortalName",
+	a.name as "AdminName",
+		wt.reference_number
+from
+	public.whitelabel_transactions wt
+inner join 
+        public.admins a on
+	wt.admin_id = a.id
+left join 
+        public.portal p on
+	wt.portal_id = p.id
+where
+	wt.is_approved = $3
+	and (wt.reference_number ilike $4
+		or $4 is null)
+order by
+	wt.created_at
+limit $1 offset $2;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_analytics_of_mock_test(int4);
+
+create or replace
+function public.get_analytics_of_mock_test("MOCKTESTATTEMPTID" integer)
+ returns table("Analytics" character varying)
+ language plpgsql
+as $function$
+	begin
+		return query
+		select
+	total_marks_obtained
+from
+	public.mock_test_attempts
+where
+	id = $1
+order by
+	created_at
+		;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_appeared_question(int4, int4);
+
+create or replace
+function public.get_appeared_question("QUESTIONID" integer,
+"USERID" integer)
+ returns table("AppearedQuestionId" integer,
+"Count" integer,
+"ExamDate" timestamp without time zone,
+"ExamVenue" character varying,
+"ExamMemory" character varying,
+"CreatedAt" timestamp without time zone)
+ language plpgsql
+as $function$
+	declare 
+		count_appeared_question integer;
+
+begin
+		select
+	count(*)
+into
+	count_appeared_question
+from
+	public.appeared_questions aq
+where
+	aq.question_id = $1;
+
+return query
+		select
+			aq.id,
+			count_appeared_question,
+			aq.exam_date,
+			aq.exam_venue,
+			aq.exam_memory,
+			aq.created_at
+from
+	public.appeared_questions aq
+where
+	aq.question_id = $1
+	and aq.user_id = $2
+order by
+	aq.created_at desc;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_attempted_mock_tests(int4);
+
+create or replace
+function public.get_attempted_mock_tests("USERID" integer)
+ returns table("MockTestAttemptId" integer,
+"MockTestName" character varying,
+"DateTaken" timestamp without time zone)
+ language plpgsql
+as $function$
+	begin
+		return query
+		select 
+		mta.id,
+		mt.name,
+		mta.updated_at
+from
+	public.mock_test_attempts mta
+left join public.mock_test mt
+		on
+	mta.mock_test_id = mt.id
+where
+	mta.user_id = $1
+	and mta.status = 'completed'
+		;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_attempted_question(int4);
+
+create or replace
+function public.get_attempted_question("TESTQUESTIONID" integer)
+ returns table(marks_obtained real,
+users_response character varying,
+time_taken integer,
+is_ptecore boolean)
+ language plpgsql
+as $function$
+	begin
+		return query
+		select 
+			marks_obtained,
+			users_response,
+			time_taken,
+			is_ptecore
+from
+	public.attempted_questions
+where
+	id = $1;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_attempted_questions_by_question_id(int4, int4, int4, int4, bool);
+
+create or replace
+function public.get_attempted_questions_by_question_id("QUESTIONID" integer,
+"USERID" integer,
+"LIMIT" integer,
+"OFFSET" integer,
+"ISPTECORE" boolean)
+ returns table("AttemptedAnswers" jsonb[],
+"OptionNames" character varying,
+"AnswerNames" character varying)
+ language plpgsql
+as $function$
+	declare
+		result_array JSONB[];
+
+related_data JSONB[];
+
+option_names_var character varying;
+
+answer_names_var character varying;
+
+begin
+		
+	select
+	array(
+	select
+		jsonb_build_object(
+    'AttemptedQuestionId',
+		aq.id ,
+		'MarksObtained',
+		aq.marks_obtained,
+		'UsersResponse',
+		aq.users_response,
+		'TimeTaken',
+		aq.time_taken,
+		'CreatedAt',
+		aq.created_at ,
+		'UserName' ,
+		u.name,
+		'UserId' ,
+		u.id ,
+		'UserImage' ,
+		u.image_url,
+		'IsLiked',
+		exists (
+		select
+			1
+		from
+			public.attempted_questions_likes aqlinner
+		where
+			aqlinner.attempted_question_id = aq.id
+			and aqlinner.user_id = $2),
+		'TotalLikes',
+		(
+		select
+			count(aqllikes.id)
+		from
+			public.attempted_questions_likes aqllikes
+		where
+			aqllikes.attempted_question_id = aq.id
+	))
+	from
+		public.test_questions tq
+	right join public.attempted_questions aq on
+		tq.id = aq.test_question_id
+	inner join public.users u
+    on
+		aq.user_id = u.id
+	where
+		tq.id = $1
+		and aq.user_id = $2
+		and aq.is_ptecore = $5
+	order by
+		aq.created_at desc
+	limit $3 offset $4
+	)
+into
+	result_array ;
+--		return query
+--		select result_array, option_names , answer_names  from "options"
+--		where question_id in (select question_id from public.test_questions where id = $1); 
+if array_length(result_array,
+1) > 0 then
+    for i in array_lower(result_array, 1)..array_upper(result_array, 1) loop
+        select
+	array(
+	select
+		jsonb_build_object(
+            'CommentId',
+		aqc.id,
+			'UserId',
+		aqc.user_id,
+			'CreatedAt',
+		(aqc.craeted_at at TIME zone 'UTC',
+		'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+			'UserName' ,
+		uu.name,
+		    'UserImage' ,
+		uu.image_url,
+			'Comment',
+		aqc.attempted_questions_comment,
+			'IsLiked',
+		exists (
+		select
+			1
+		from
+			public.attempted_questions_comment_likes aqclinner
+		where
+			aqclinner.attempted_questions_comment_id = aqc.id
+			and aqclinner.user_id = $2),
+			'TotalLikes',
+		(
+		select
+			count(aqcllikes.id)
+		from
+			public.attempted_questions_comment_likes aqcllikes
+		where
+			aqcllikes.attempted_questions_comment_id = aqc.id)
+			)
+	from
+		attempted_questions_comments aqc
+	left join public.attempted_questions_comment_likes aqcl
+            on
+		aqc.id = aqcl.attempted_questions_comment_id
+	left join public.users uu
+            on
+		aqc.user_id = uu.id
+	where
+		aqc.attempted_question_id = (result_array[i] ->> 'AttemptedQuestionId')::int
+        )
+into
+	related_data;
+
+result_array[i] := jsonb_set(result_array[i],
+'{Comments}',
+to_jsonb(related_data));
+end loop;
+end if;
+
+if exists(
+select
+	1
+from
+	"options"
+where
+	question_id in (
+	select
+		question_id
+	from
+		public.test_questions
+	where
+		id = $1)) then
+			select
+	option_names ,
+	answer_names
+into
+	option_names_var,
+	answer_names_var
+from
+	"options"
+where
+	question_id in (
+	select
+		question_id
+	from
+		public.test_questions
+	where
+		id = $1);
+else
+			option_names_var := null;
+
+answer_names_var := null;
+end if;
+
+return QUERY
+select
+	result_array,
+	option_names_var,
+	answer_names_var;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_attempted_questions_of_others_by_question_id(int4, int4, int4, int4, bool);
+
+create or replace
+function public.get_attempted_questions_of_others_by_question_id("QUESTIONID" integer,
+"USERID" integer,
+"LIMIT" integer,
+"OFFSET" integer,
+"ISPTECORE" boolean)
+ returns table("AttemptedAnswers" jsonb[],
+"OptionNames" character varying,
+"AnswerNames" character varying)
+ language plpgsql
+as $function$
+	declare
+		result_array JSONB[];
+
+related_data JSONB[];
+
+option_names_var character varying;
+
+answer_names_var character varying;
+
+begin
+		
+	select
+	array(
+	select
+		jsonb_build_object(
+    'AttemptedQuestionId',
+		aq.id ,
+		'MarksObtained',
+		aq.marks_obtained,
+		'UsersResponse',
+		aq.users_response,
+		'TimeTaken',
+		aq.time_taken,
+		'CreatedAt',
+		aq.created_at ,
+		'UserName' ,
+		u.name ,
+		'UserId' ,
+		u.id ,
+		'UserImage' ,
+		u.image_url,
+		'IsLiked',
+		exists (
+		select
+			1
+		from
+			public.attempted_questions_likes aqlinner
+		where
+			aqlinner.attempted_question_id = aq.id
+			and aqlinner.user_id = $2),
+		'TotalLikes',
+		(
+		select
+			count(aqllikes.id)
+		from
+			public.attempted_questions_likes aqllikes
+		where
+			aqllikes.attempted_question_id = aq.id
+	))
+	from
+		public.test_questions tq
+	right join public.attempted_questions aq on
+		tq.id = aq.test_question_id
+	inner join public.users u
+    on
+		aq.user_id = u.id
+	where
+		tq.id = $1
+		and aq.user_id != $2
+		and aq.is_ptecore = $5
+	order by
+		aq.created_at desc
+	limit $3 offset $4
+)
+into
+	result_array ;
+
+if array_length(result_array,
+1) > 0 then
+    for i in array_lower(result_array, 1)..array_upper(result_array, 1) loop
+        select
+	array(
+	select
+		jsonb_build_object(
+            'CommentId',
+		aqc.id,
+			'UserId',
+		aqc.user_id,
+			'CreatedAt',
+		to_char(aqc.craeted_at at TIME zone 'UTC',
+		'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+			'UserName' ,
+		uu.name ,
+		    'UserImage' ,
+		uu.image_url,
+			'Comment',
+		aqc.attempted_questions_comment,
+			'IsLiked',
+		exists (
+		select
+			1
+		from
+			public.attempted_questions_comment_likes aqclinner
+		where
+			aqclinner.attempted_questions_comment_id = aqc.id
+			and aqclinner.user_id = $2),
+			'TotalLikes',
+		(
+		select
+			count(aqcllikes.id)
+		from
+			public.attempted_questions_comment_likes aqcllikes
+		where
+			aqcllikes.attempted_questions_comment_id = aqc.id)
+			)
+	from
+		attempted_questions_comments aqc
+	left join public.attempted_questions_comment_likes aqcl
+            on
+		aqc.id = aqcl.attempted_questions_comment_id
+	left join public.users uu
+            on
+		aqc.user_id = uu.id
+	where
+		aqc.attempted_question_id = (result_array[i] ->> 'AttemptedQuestionId')::int
+        )
+into
+	related_data;
+
+result_array[i] := jsonb_set(result_array[i],
+'{Comments}',
+to_jsonb(related_data));
+end loop;
+end if;
+
+if exists(
+select
+	1
+from
+	"options"
+where
+	question_id in (
+	select
+		question_id
+	from
+		public.test_questions
+	where
+		id = $1)) then
+			select
+	option_names ,
+	answer_names
+into
+	option_names_var,
+	answer_names_var
+from
+	"options"
+where
+	question_id in (
+	select
+		question_id
+	from
+		public.test_questions
+	where
+		id = $1);
+else
+			option_names_var := null;
+
+answer_names_var := null;
+end if;
+
+return QUERY
+select
+	result_array,
+	option_names_var,
+	answer_names_var;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_comments(int4, int4);
+
+create or replace
+function public.get_comments("TESTQUESTIONID" integer,
+"USERID" integer)
+ returns table("CommentId" integer,
+"Comment" character varying,
+"CommentImg" character varying,
+"Category" character varying,
+"CreatedAt" text,
+"UserId" integer,
+"UserName" character varying,
+"UserImageUrl" character varying,
+"IsLiked" boolean,
+"Replies" json)
+ language plpgsql
+as $function$
+begin
+    return QUERY 
+    with recursive comment_tree as (
+select
+	c.id as "CommentId",
+	c.comment as "Comment",
+	c.comment_img as "CommentImg",
+	c.category as "Category",
+	to_char(c.craeted_at at TIME zone 'UTC',
+	'YYYY-MM-DD"T"HH24:MI:SS"Z"') as "CreatedAt",
+	c.user_id as "UserId",
+	u.name as "UserName",
+	u.image_url as "UserImageUrl",
+	exists(
+	select
+		1
+	from
+		public.comment_likes
+	where
+		c.user_id = $2
+		and comment_id = c.id),
+	case
+		when COUNT(sub.id) = 0 then null
+		else json_agg(
+                    json_build_object(
+                        'ReplyId',
+		sub.id,
+		'Reply',
+		sub.comment,
+		'ReplyImg',
+		sub.comment_img,
+			            'CreatedAt',
+		to_char(sub.craeted_at at TIME zone 'UTC',
+		'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+		'UserId',
+		sub.user_id,
+		'UserName',
+		u2.name,
+		'UserImageUrl',
+		u2.image_url,
+		'IsLiked',
+		exists(
+		select
+			1
+		from
+			public.comment_likes
+		where
+			sub.user_id = $2
+			and comment_id = sub.id)
+                    )
+	order by
+		sub.craeted_at asc
+                )
+	end as "Replies"
+from
+	"comments" c
+left join
+            "users" u on
+	c.user_id = u.id
+left join
+            "comments" sub on
+	c.id = sub.parent_id
+left join
+            "users" u2 on
+	sub.user_id = u2.id
+where
+	c.test_question_id = $1
+	and c.parent_id is null
+group by
+	c.id,
+	u.name,
+	u.image_url
+order by
+	c.craeted_at desc
+    )
+    select
+	*
+from
+	comment_tree;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_deleted_users();
+
+create or replace
+function public.get_deleted_users()
+ returns table("UserID" integer)
+ language plpgsql
+as $function$
+	begin
+		return query
+		select
+	id
+from
+	public.users
+where
+	is_deleted = true
+order by
+	id desc;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_mock_test_questions_by_test_id(int4, int4);
+
+create or replace
+function public.get_mock_test_questions_by_test_id("MOCKTESTTID" integer,
+"USERID" integer)
+ returns table("MockTestAttemptId" integer,
+"MockTestQuestionTableId" integer,
+"QuestionId" integer,
+"QuestionName" character varying,
+"QuestionStatement" character varying,
+"Category" character varying,
+"SubCategory" character varying)
+ language plpgsql
+as $function$
+declare 
+	mock_test_attempt_id_ integer;
+
+begin
+		if (not exists(
+select
+	1
+from
+	public.mock_test_attempts
+where
+	mock_test_id = $1
+	and user_id = $2
+	and status = 'pending')) then
+			insert
+	into
+	public.mock_test_attempts(mock_test_id,
+	user_id)
+values ($1,
+$2) returning id
+into
+	mock_test_attempt_id_;
+end if;
+
+return query
+		select
+	mock_test_attempt_id_,
+	mtq.id,
+	mtq.question_id ,
+	q.name ,
+	q.statement ,
+	tc.category_name,
+	t.test_name
+from
+	public.mock_test_questions mtq
+left join public.question q
+		on
+	mtq.question_id = q.id
+left join public.test t
+		on
+	q.test_id = t.id
+left join public.test_categories tc
+		on
+	t.category_id = tc.id
+where
+	mtq.mock_test_id = $1
+order by
+	        case
+		q.test_id
+	            when 18 then 1
+		when 19 then 2
+		when 24 then 3
+		when 21 then 4
+		when 25 then 5
+		when 20 then 6
+		when 7 then 7
+		when 6 then 8
+		when 23 then 9
+		when 1 then 10
+		when 2 then 11
+		when 3 then 12
+		when 4 then 13
+		when 5 then 14
+		when 17 then 15
+		when 15 then 16
+		when 9 then 17
+		when 10 then 18
+		when 16 then 19
+		when 11 then 20
+		when 12 then 21
+		when 14 then 22
+	end;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_mock_test_questions_by_test_id_for_admin(int4);
+
+create or replace
+function public.get_mock_test_questions_by_test_id_for_admin("MOCKTESTTID" integer)
+ returns table("MockTestQuestionTableId" integer,
+"QuestionId" integer,
+"QuestionName" character varying,
+"QuestionStatement" character varying,
+"Category" character varying,
+"SubCategory" character varying)
+ language plpgsql
+as $function$
+begin
+    return query
+    select
+	mtq.id,
+	mtq.question_id,
+	q.name,
+	q.statement,
+	tc.category_name,
+	t.test_name
+from
+	public.mock_test_questions mtq
+left join 
+        public.question q on
+	mtq.question_id = q.id
+left join 
+        public.test t on
+	q.test_id = t.id
+left join 
+        public.test_categories tc on
+	t.category_id = tc.id
+where
+	mtq.mock_test_id = $1
+order by
+	case
+		q.test_id
+	            when 18 then 1
+		when 19 then 2
+		when 24 then 3
+		when 21 then 4
+		when 25 then 5
+		when 20 then 6
+		when 7 then 7
+		when 6 then 8
+		when 23 then 9
+		when 1 then 10
+		when 2 then 11
+		when 3 then 12
+		when 4 then 13
+		when 5 then 14
+		when 17 then 15
+		when 15 then 16
+		when 9 then 17
+		when 10 then 18
+		when 16 then 19
+		when 11 then 20
+		when 12 then 21
+		else 14
+	end;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_mock_test_questions_if_pending(int4, int4);
+
+create or replace
+function public.get_mock_test_questions_if_pending("MOCKTESTATTEMPTID" integer,
+"USERID" integer)
+ returns table("MockTestQuestionTableId" integer,
+"QuestionId" integer,
+"QuestionName" character varying,
+"QuestionStatement" character varying,
+"Category" character varying,
+"SubCategory" character varying,
+"IsAttempted" boolean,
+"TimeTaken" integer,
+"AllTimes" text)
+ language plpgsql
+as $function$
+declare 
+	mock_test_id_ integer;
+
+begin
+		select
+	mock_test_id
+into
+	mock_test_id_
+from
+	public.mock_test_attempts mta
+where
+	mta.id = $1;
+
+return query
+		select
+	mtq.id,
+	mtq.question_id ,
+	q.name ,
+	q.statement ,
+	tc.category_name,
+	t.test_name,
+		exists(
+	select
+		1
+	from
+		public.mock_attempted_questions maq
+	where
+		maq.mock_test_attempt_id = $1
+		and maq.user_id = $2
+		and maq.mock_test_question_id = mtq.id),
+		(
+	select
+		maq.time_taken
+	from
+		public.mock_attempted_questions maq
+	where
+		maq.mock_test_attempt_id = $1
+		and maq.user_id = $2
+		and maq.mock_test_question_id = mtq.id
+	limit 1),		
+		(
+	select
+		maq.alltimes
+	from
+		public.mock_attempted_questions maq
+	where
+		maq.mock_test_attempt_id = $1
+		and maq.user_id = $2
+		and maq.mock_test_question_id = mtq.id
+	limit 1)
+from
+	public.mock_test_questions mtq
+left join public.question q
+		on
+	mtq.question_id = q.id
+left join public.test t
+		on
+	q.test_id = t.id
+left join public.test_categories tc
+		on
+	t.category_id = tc.id
+where
+	mtq.mock_test_id = mock_test_id_
+order by
+	        case
+		q.test_id
+	            when 18 then 1
+		when 19 then 2
+		when 24 then 3
+		when 21 then 4
+		when 25 then 5
+		when 20 then 6
+		when 7 then 7
+		when 6 then 8
+		when 23 then 9
+		when 1 then 10
+		when 2 then 11
+		when 3 then 12
+		when 4 then 13
+		when 5 then 14
+		when 17 then 15
+		when 15 then 16
+		when 9 then 17
+		when 10 then 18
+		when 16 then 19
+		when 11 then 20
+		when 12 then 21
+		when 14 then 22
+	end;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_mock_test_user_attempted_count(int4, bool);
+
+create or replace
+function public.get_mock_test_user_attempted_count("USERID" integer,
+"ISPTECORE" boolean)
+ returns table("TotalMockTests" integer,
+"AttemptedMockTests" integer)
+ language plpgsql
+as $function$
+	declare 
+		total_ integer;
+
+attempted_ integer;
+
+begin
+		select
+	count(*)
+into
+	total_
+from
+	public.mock_test;
+
+select
+	COUNT(*)
+into
+	attempted_
+from
+	(
+	select
+		distinct user_id
+	from
+		public.mock_test_attempts
+	where
+		user_id = $1
+		and status = 'completed'
+		) as distinct_attempts;
+
+return query
+		select
+	total_,
+	attempted_;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_plans_with_subplans();
+
+create or replace
+function public.get_plans_with_subplans()
+ returns jsonb
+ language plpgsql
+as $function$
+declare
+    result jsonb;
+
+begin
+-- Build the JSON result using CTEs to avoid nested aggregation
+    with plan_subplan as (
+select
+	p."name" as plan_name,
+			p.id as plan_id,
+	b.id as bridge_id,
+	s."name" as subplan_name,
+	b.price_per_account,
+	b.created_at,
+	b.updated_at
+from
+	public.plans_for_whitelabels p
+join
+            public.bridge_paln_subplans b on
+	p.id = b.plan_id
+join
+            public.subplans_for_whitelabels s on
+	b.subplan_id = s.id
+	and s.mock_only = false
+    ),
+    aggregated_subplans as (
+select
+	plan_name,
+			plan_id,
+	jsonb_agg(
+                jsonb_build_object(
+                    'id',
+	bridge_id,
+	'name',
+	subplan_name,
+	'price_per_account',
+	price_per_account,
+	'created_at',
+	created_at,
+	'updated_at',
+	updated_at
+                )
+            ) as subplans
+from
+	plan_subplan
+group by
+	plan_name,
+			plan_id
+    )
+    select
+	jsonb_agg(
+        jsonb_build_object(
+            'plan_name',
+	plan_name,
+			'plan_id',
+	plan_id,
+	'subplans',
+	subplans
+        )
+    )
+into
+	result
+from
+	aggregated_subplans;
+
+return result;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_plans_with_subplans_mockonly();
+
+create or replace
+function public.get_plans_with_subplans_mockonly()
+ returns jsonb
+ language plpgsql
+as $function$
+declare
+    result jsonb;
+
+begin
+-- Build the JSON result using CTEs to avoid nested aggregation
+    with plan_subplan as (
+select
+	p."name" as plan_name,
+			p.id as plan_id,
+	b.id as bridge_id,
+	s."name" as subplan_name,
+	b.price_per_account,
+	b.created_at,
+	b.updated_at
+from
+	public.plans_for_whitelabels p
+join
+            public.bridge_paln_subplans b on
+	p.id = b.plan_id
+join
+            public.subplans_for_whitelabels s on
+	b.subplan_id = s.id
+	and s.mock_only = true
+    ),
+    aggregated_subplans as (
+select
+	plan_name,
+			plan_id,
+	jsonb_agg(
+                jsonb_build_object(
+                    'id',
+	bridge_id,
+	'name',
+	subplan_name,
+	'price_per_account',
+	price_per_account,
+	'created_at',
+	created_at,
+	'updated_at',
+	updated_at
+                )
+            ) as subplans
+from
+	plan_subplan
+group by
+	plan_name,
+	plan_id
+    )
+    select
+	jsonb_agg(
+        jsonb_build_object(
+            'plan_name',
+	plan_name,
+			'plan_id',
+	plan_id,
+	'subplans',
+	subplans
+        )
+    )
+into
+	result
+from
+	aggregated_subplans;
+
+return result;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_portal_configuration(int4);
+
+create or replace
+function public.get_portal_configuration("PORTALID" integer)
+ returns table("StrategyVideoVisible" boolean,
+"TemplateVisible" boolean,
+"GrammarVisible" boolean,
+"SelfStrategyVideoVisible" boolean,
+"SelfTemplateVisible" boolean,
+"SelfGrammarVisible" boolean)
+ language plpgsql
+as $function$
+	begin
+		return query
+		select 
+			P.strategy_video_visible,
+			P.template_visible,
+			P.grammar_visible,
+			P.self_strategy_video_visible,
+			P.self_template_visible,
+			P.self_grammar_visible
+from
+	public.portal p
+where
+	p.id = $1;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_portal_info(varchar, bool);
+
+create or replace
+function public.get_portal_info("PORTALURL" character varying,
+"ISADMIN" boolean)
+ returns setof portal
+ language plpgsql
+as $function$
+	begin
+		if $2 = true then
+		return query
+		select
+	*
+from
+	public.portal p
+where
+	p.admin_portal_link = $1;
+else
+			return query
+			select
+	*
+from
+	public.portal p
+where
+	p.portal_link = $1;
+end if;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_portal_info_by_id(int4);
+
+create or replace
+function public.get_portal_info_by_id("PORTALID" integer)
+ returns setof portal
+ language plpgsql
+as $function$
+	begin
+		return query
+		select
+	*
+from
+	public.portal p
+where
+	p.id = $1;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_portal_info_for_users(varchar);
+
+create or replace
+function public.get_portal_info_for_users("PortalLink" character varying)
+ returns setof portal
+ language plpgsql
+as $function$
+	begin
+		return query
+		select
+	*
+from
+	public.portal p
+where
+	p.portal_link ilike($1);
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_portal_transactions(int4, varchar);
+
+create or replace
+function public.get_portal_transactions("PORTALID" integer,
+"REFERENCENUMBER" character varying)
+ returns setof whitelabel_transactions
+ language plpgsql
+as $function$
+    begin
+        return QUERY
+        select
+	*
+from
+	public.whitelabel_transactions
+where
+	portal_id = $1
+	and (reference_number ilike $2
+		or $2 is null)
+order by
+	created_at
+		;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_promo_code_by_id(varchar);
+
+create or replace
+function public.get_promo_code_by_id("PROMOCODEID" character varying)
+ returns table("Percentage" integer,
+"FixedAmount" integer)
+ language plpgsql
+as $function$
+begin
+    return QUERY
+    select
+	percentage,
+	fixed_amount
+from
+	public.promo_codes
+where
+	id = $1
+	and active = true
+	and expiry_date > now();
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_promo_code_by_id_for_user(varchar, int4);
+
+create or replace
+function public.get_promo_code_by_id_for_user("PROMOCODEID" character varying,
+"USERID" integer)
+ returns table("Percentage" integer,
+"FixedAmount" integer)
+ language plpgsql
+as $function$
+begin
+    return QUERY
+    select
+	percentage,
+	fixed_amount
+from
+	public.promo_codes
+where
+	id = $1
+	and active = true
+	and (user_id = $2
+		or user_id is null)
+	and count - temp_count > 0
+	and expiry_date > now();
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_promo_code_by_id_for_whitelabel_admin(varchar, int4);
+
+create or replace
+function public.get_promo_code_by_id_for_whitelabel_admin("PROMOCODEID" character varying,
+"PORTALID" integer)
+ returns table("Percentage" integer,
+"FixedAmount" integer)
+ language plpgsql
+as $function$
+begin
+    return QUERY
+    select
+	percentage,
+	fixed_amount
+from
+	public.promo_codes
+where
+	id = $1
+	and active = true
+	and (portal_id = $2
+		or portal_id is null)
+	and count - temp_count > 0
+	and expiry_date > now();
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_question_with_options(int4, int4, int4);
+
+create or replace
+function public.get_question_with_options("QUESTIONID" integer,
+"USERID" integer,
+"TESTQUESTIONID" integer)
+ returns table("QuestionStatement" character varying,
+"AudioObject" character varying,
+"MajorAspects" character varying,
+"MinorAspects" character varying,
+"OptionNames" character varying,
+"AnswerNames" character varying,
+"OptionText" character varying,
+"IsBookMarked" boolean,
+"BookMarkedId" integer,
+"AppearedCount" integer,
+"TestQuestionNoteId" integer,
+"TestQuestionNoteText" character varying,
+"QuestionImage" character varying,
+"Prediction" boolean,
+"CreatedAt" timestamp without time zone,
+"UpdatedAt" timestamp without time zone)
+ language plpgsql
+as $function$
+	declare 
+		count_of_appeared integer = 0;
+
+begin
+		select
+	cast(count(apq.id) as integer)
+into
+	count_of_appeared
+from
+		public.appeared_questions apq
+where
+	apq.question_id = $1;
+
+return query
+		select
+	q.statement,
+	q.audio_object ,
+	q.major_aspects ,
+		q.minor_aspects ,
+	o.option_names ,
+	o.answer_names ,
+	o.option_text,
+		exists (
+	select
+		1
+	from
+		public.bookmarks b ,
+		public.test_questions tq
+	where
+		tq.id = b.test_question_id
+		and b.user_id = $2
+		and tq.id = $3) ,
+		(
+	select
+		b.id
+	from
+		public.bookmarks b ,
+		public.test_questions tq
+	where
+		tq.id = b.test_question_id
+		and b.user_id = $2
+		and tq.id = $3) as bookMarkedId,
+		count_of_appeared ,
+	tqn.id ,
+	tqn.note ,
+	q.question_image ,
+	q.prediction ,
+	q.created_at ,
+	q.updated_at
+from
+	public.question q
+left join public.options o
+		on
+	q.id = o.question_id
+left join public.test_question_notes tqn 
+		on
+	q.id = tqn.test_question_id
+	and tqn.user_id = $2
+where
+	q.id = $1;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_question_with_options_for_admin(int4, int4);
+
+create or replace
+function public.get_question_with_options_for_admin("QUESTIONID" integer,
+"TESTQUESTIONID" integer)
+ returns table("QuestionStatement" character varying,
+"AudioObject" character varying,
+"MajorAspects" character varying,
+"MinorAspects" character varying,
+"OptionNames" character varying,
+"AnswerNames" character varying,
+"OptionText" character varying,
+"AppearedCount" integer,
+"QuestionImage" character varying,
+"Prediction" boolean,
+"OptionId" integer)
+ language plpgsql
+as $function$
+	declare 
+		count_of_appeared integer = 0;
+
+begin
+		select
+	cast(count(apq.id) as integer)
+into
+	count_of_appeared
+from
+		public.appeared_questions apq
+where
+	apq.question_id = $1;
+
+return query
+		select
+	q.statement,
+	q.audio_object ,
+	q.major_aspects ,
+		q.minor_aspects ,
+	o.option_names ,
+	o.answer_names ,
+	o.option_text,
+		count_of_appeared ,
+	q.question_image,
+	q.prediction ,
+	o .id
+from
+	public.question q
+left join public.options o
+		on
+	q.id = o.question_id
+where
+	q.id = $1;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_question_with_options_for_mock(int4);
+
+create or replace
+function public.get_question_with_options_for_mock("QUESTIONID" integer)
+ returns table("QuestionStatement" character varying,
+"AudioObject" character varying,
+"MajorAspects" character varying,
+"MinorAspects" character varying,
+"OptionNames" character varying,
+"AnswerNames" character varying,
+"OptionText" character varying,
+"QuestionImage" character varying,
+"Prediction" boolean)
+ language plpgsql
+as $function$
+	begin
+		return query
+		select
+	q.statement,
+	q.audio_object ,
+	q.major_aspects ,
+		q.minor_aspects ,
+	o.option_names ,
+	o.answer_names ,
+	o.option_text,
+	q.question_image,
+	q.prediction
+from
+	public.question q
+left join public.options o
+		on
+	q.id = o.question_id
+where
+	q.id = $1;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_remaining_free_tokens(int4);
+
+create or replace
+function public.get_remaining_free_tokens("USERID" integer)
+ returns table("NonAITokens" integer,
+"SpeakingTokens" integer,
+"WritingTokens" integer)
+ language plpgsql
+as $function$
+	begin
+		return query
+		select
+	non_ai,
+	speaking,
+	writing
+from
+	public.users
+where
+	id = $1;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_score_of_mock_test(int4);
+
+create or replace
+function public.get_score_of_mock_test("MOCKTESTATTEMPTID" integer)
+ returns table("MockTestName" character varying,
+"AttemptedAt" timestamp without time zone,
+"UserResponse" text,
+"TimeTaken" integer,
+"AudioURL" character varying)
+ language plpgsql
+as $function$
+	begin
+--		select analytics from public.mock_test_attempts
+--		where id =$1;
+		return query
+		select 
+		mt.name,
+		mta.created_at,
+		maq.users_response,
+		maq.time_taken,
+		maq.audio_url
+from
+	public.mock_test_attempts mta
+left join public.mock_test mt
+		on
+	mta.mock_test_id = mt.id
+left join public.mock_attempted_questions maq 
+		on
+	mta.id = maq.mock_test_attempt_id
+where
+	mta.id = $1
+order by
+	maq.created_at;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_strategy_video_of_portal(bool, int4);
+
+create or replace
+function public.get_strategy_video_of_portal("CORE" boolean,
+"PORTALID" integer)
+ returns table("Id" integer,
+"Title" character varying,
+"Author" character varying,
+"YtLink" character varying,
+"Category" character varying,
+"Priority" integer,
+"Language" character varying,
+"Core" boolean,
+"Thumbnail" character varying,
+"CreatedAt" timestamp without time zone,
+"UpdatedAt" timestamp without time zone)
+ language plpgsql
+as $function$
+declare
+	strategy_video_visible_ boolean;
+
+begin
+	select 
+		strategy_video_visible
+	into 
+		strategy_video_visible_
+from
+	public.portal
+where
+	id = $2;
+
+return QUERY
+	select
+		sv.id,
+		sv.title,
+		sv.author,
+		sv.yt_link,
+		sv.category,
+		sv.priority,
+		sv."language",
+		sv.core,
+		sv.thumbnail,
+		sv.created_at,
+		sv.updated_at
+from
+		public.strategy_video sv
+where 
+		sv.core = $1
+	and (
+			sv.portal_id = $2
+		or (strategy_video_visible_
+			and sv.portal_id = 1)
+		);
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_student_by_admin(int4, varchar, bool, varchar);
+
+create or replace
+function public.get_student_by_admin("PORTALID" integer,
+"NAME" character varying,
+"SUBSCRIBED" boolean,
+"TYPE" character varying)
+ returns table("Id" integer,
+"Email" character varying,
+"Name" character varying,
+"CreatedAt" timestamp without time zone,
+"UpdatedAt" timestamp without time zone,
+"Type" character varying,
+"IsSubscribed" boolean,
+"SessionID" character varying,
+"ExpiryTime" timestamp with time zone,
+"PlanName" character varying)
+ language plpgsql
+as $function$
+	begin
+		return query
+		select
+	u.id,
+	u.email,
+	u."name",
+	u.created_at,
+	u.updated_at,
+	u.type,
+	u.is_subscribed,
+	u.sessionid,
+	u.session_expiry,
+	s.name
+from
+	public.users u
+left join public.subscriptions s
+        on
+	u.subscription_id = s.id
+where
+	u.is_deleted = false
+	and u.deleted_from_trash = false
+	and u.portal_id = $1
+	and (u."name" ilike $2
+		or $2 is null)
+	and (u.is_subscribed = $3
+		or $3 is null)
+	and (u.type ilike $4
+		or $4 is null);
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_student_data(int4);
+
+create or replace
+function public.get_student_data("STUDENTID" integer)
+ returns table("Id" integer,
+"Email" character varying,
+"Name" character varying,
+"CreatedAt" timestamp without time zone,
+"UpdatedAt" timestamp without time zone,
+"Type" character varying,
+"ImageUrl" character varying,
+"ExamTarget" text)
+ language plpgsql
+as $function$
+	begin
+		return query
+		select
+	id ,
+	email ,
+	"name" ,
+	created_at ,
+	updated_at,
+	type,
+	image_url,
+	exam_target
+from
+	public.users
+where
+	id = $1;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_student_from_trash_by_admin(int4, varchar, bool, varchar);
+
+create or replace
+function public.get_student_from_trash_by_admin("PORTALID" integer,
+"NAME" character varying,
+"SUBSCRIBED" boolean,
+"TYPE" character varying)
+ returns table("Id" integer,
+"Email" character varying,
+"Name" character varying,
+"CreatedAt" timestamp without time zone,
+"UpdatedAt" timestamp without time zone,
+"Type" character varying,
+"IsSubscribed" boolean)
+ language plpgsql
+as $function$
+	begin
+		return query
+		select
+	id,
+	email,
+	"name",
+	created_at,
+	updated_at,
+	type,
+	is_subscribed
+from
+	public.users
+where
+	is_deleted = true
+	and deleted_from_trash = false
+	and portal_id = $1
+	and ("name" ilike $2
+		or $2 is null)
+	and (is_subscribed = $3
+		or $3 is null)
+	and (type ilike $4
+		or $4 is null);
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_test_categories_with_tests();
+
+create or replace
+function public.get_test_categories_with_tests()
+ returns table("TestCategoryId" integer,
+"CategoryName" character varying,
+"Tests" jsonb)
+ language plpgsql
+as $function$
+begin
+    return QUERY
+    select
+	tc.id as "TestCategoryId",
+	tc.category_name as "CategoryName",
+	coalesce(
+               (
+	select
+		jsonb_agg(
+                   jsonb_build_object(
+                       'TestId',
+		t.id,
+		'TestName',
+		t.test_name,
+		'IsAnswerFixed',
+		t.is_answer_fixed,
+		'BeginningTime',
+		t.beginning_time,
+		'TotalTime',
+		t.total_time
+                   )
+	order by
+		t.order_id asc,
+		t.id asc
+               )
+	from
+		public.test t
+	where
+		t.category_id = tc.id
+		and t.id is not null
+               ),
+	'[]'::jsonb) as "Tests"
+from
+	public.test_categories tc
+order by
+	tc.order_id,
+	tc.id;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_test_question_note_of_user(int4, int4);
+
+create or replace
+function public.get_test_question_note_of_user("TESTQUESTIONID" integer,
+"USERID" integer)
+ returns table("Id" integer,
+"Note" character varying,
+"CreatedAt" timestamp without time zone)
+ language plpgsql
+as $function$
+	begin
+		return query
+		select
+	id ,
+	note ,
+	created_at
+from
+	public.test_question_notes tqn
+where
+	tqn.test_question_id = $1
+	and tqn.user_id = $2
+		;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_test_questions_by_test_id(int4, int4, int4);
+
+create or replace
+function public.get_test_questions_by_test_id("TESTID" integer,
+"PAGE" integer,
+"PAGESIZE" integer)
+ returns table("TestQuestionTableId" integer,
+"QuestionId" integer,
+"QuestionName" character varying,
+"QuestionStatement" character varying)
+ language plpgsql
+as $function$
+begin
+		return query
+		select
+	tq.id,
+	tq.question_id ,
+	q.name ,
+	q.statement
+from
+	public.test_questions tq
+left join public.question q
+		on
+	tq.question_id = q.id
+where
+	tq.test_id = $1
+limit $2 offset $3;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_test_questions_by_test_name(varchar, int4, int4, int4);
+
+create or replace
+function public.get_test_questions_by_test_name("TESTNAME" character varying,
+"PAGE" integer,
+"PAGESIZE" integer,
+"USERID" integer)
+ returns json
+ language plpgsql
+as $function$
+	declare 
+		total_questions_ integer = 0;
+
+result json;
+
+begin
+	select
+	count(tq.id)
+into
+	total_questions_
+from
+	public.test_questions tq
+left join public.test t
+	on
+	tq.test_id = t.id
+where
+	t.test_name = $1;
+
+result := json_build_object(
+        'total_questions',
+total_questions_,
+        'questions',
+(
+select
+	json_agg(row_to_json(t))
+from
+	(
+	select
+		tq.id as "TestQuestionTableId",
+		tq.question_id as "QuestionId",
+		q.name as "QuestionName",
+		q.statement as "QuestionStatement",
+		COUNT(aq.id) as "TestAttemptedCount"
+	from
+		public.test_questions tq
+	left join
+                    public.question q on
+		tq.question_id = q.id
+	left join
+                    public.attempted_questions aq on
+		tq.id = aq.test_question_id
+		and aq.user_id = $4
+	left join 
+                    public.test t on
+		t.id = tq.test_id
+	where
+		t.name = $1
+	group by
+		tq.id,
+		tq.question_id,
+		q.name,
+		q.statement
+	limit $3 offset $2
+            ) t
+        )
+    );
+
+return result;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_test_questions_of_user_by_test_id(int4, int4, int4, int4, varchar);
+
+create or replace
+function public.get_test_questions_of_user_by_test_id("TESTID" integer,
+"PAGE" integer,
+"PAGESIZE" integer,
+"USERID" integer,
+"SearchName" character varying)
+ returns table("TestQuestionTableId" integer,
+"QuestionId" integer,
+"QuestionName" character varying,
+"QuestionStatement" character varying,
+"TestAttemptedCount" integer)
+ language plpgsql
+as $function$
+begin
+    return QUERY
+	select
+	    tq.id,
+	    tq.question_id,
+	    q.name,
+	    q.statement,
+	    cast(COUNT(aq.id) as integer) as attempted_count
+	--	    ,
+	--	    CONCAT('[', COALESCE(ARRAY_TO_STRING(ARRAY_AGG(aq.id ORDER BY aq.created_at desc), ','), ''), ']') AS attempted_ids
+from
+	    public.test_questions tq
+left join
+	    public.question q on
+	tq.question_id = q.id
+left join
+	    public.attempted_questions aq on
+	tq.id = aq.test_question_id
+	and aq.user_id = $4
+where
+	    tq.test_id = $1
+	and ($5 is null
+		or q.name ilike '%' || $5 || '%')
+group by
+	    tq.id,
+	    tq.question_id,
+	    q.name,
+	    q.statement
+limit $2 offset $3;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_test_questions_of_user_by_test_name(varchar, int4, int4, int4, bool, varchar, varchar, bool, bool, varchar, bool, bool);
+
+create or replace
+function public.get_test_questions_of_user_by_test_name("TESTNAME" character varying,
+"PAGE" integer,
+"PAGESIZE" integer,
+"USERID" integer,
+"ISPRECORE" boolean,
+"SEARCHNAME" character varying,
+"ORDERBY" character varying,
+"HIGHFREQUENCY" boolean,
+"BOOKMARKED" boolean,
+"ISPRACTISED" character varying,
+"EASY" boolean,
+"PREDICTION" boolean)
+ returns json
+ language plpgsql
+as $function$
+declare 
+    total_questions_ integer := 0;
+
+result json;
+
+begin
+-- Count total questions
+    select
+	count(tq.id)
+    into
+	total_questions_
+from
+	public.test_questions tq
+left join public.test t on
+	tq.test_id = t.id
+where
+	t.test_name = $1;
+-- Fetch test questions and aggregate into JSON
+    with test_questions_cte as (
+select
+	json_build_object(
+                'TestQuestionTableId',
+	tq.id,
+	'QuestionId',
+	tq.question_id,
+	'QuestionName',
+	q.name,
+	'TestAttemptedCount',
+	cast((
+	select
+		count(aq.id)
+	from
+		public.attempted_questions aq
+	where
+		tq.id = aq.test_question_id
+		and aq.user_id = $4
+		and aq.is_ptecore = $5
+                ) as integer),
+	'BeginningTime',
+	t.beginning_time,
+	'TotalTime',
+	t.total_time,
+	'IsBookMarked',
+	exists (
+	select
+		1
+	from
+		public.bookmarks b
+	where
+		tq.id = b.test_question_id
+		and b.user_id = $4
+                ),
+	'AppearedCount',
+	cast(COUNT(apq.id) as integer),
+	'BookMarkedId',
+	b.id,
+	'Prediction',
+	q.prediction,
+	'CreatedAt',
+	q.created_at,
+	'UpdatedAt',
+	q.updated_at
+            ) as json_obj
+from
+	public.test_questions tq
+left join public.question q on
+	tq.question_id = q.id
+left join public.attempted_questions aq on
+	tq.id = aq.test_question_id
+	and aq.user_id = $4
+	and aq.is_ptecore = $5
+left join public.test t on
+	t.test_name = $1
+left join public.appeared_questions apq on
+	q.id = apq.question_id
+left join public.bookmarks b on
+	tq.id = b.test_question_id
+	and b.user_id = $4
+left join public.options op on
+	q.id = op.question_id
+where
+	tq.test_id = t.id
+	and ($6 is null
+		or q.name ilike '%' || $6 || '%'
+		or q.id::character varying ilike '%' || $6 || '%')
+	and ($9 is null
+		or $9 is false
+		or ($9 = true
+			and exists (
+			select
+				1
+			from
+				public.bookmarks b
+			where
+				tq.id = b.test_question_id
+				and b.user_id = $4)))
+	and ($10 is null
+		or ($10 = 'practiced'
+			and exists (
+			select
+				1
+			from
+				public.attempted_questions aq
+			where
+				tq.id = aq.test_question_id
+				and aq.user_id = $4
+				and aq.is_ptecore = $5))
+		or ($10 = 'not-practiced'
+			and not exists (
+			select
+				1
+			from
+				public.attempted_questions aq
+			where
+				tq.id = aq.test_question_id
+				and aq.user_id = $4
+				and aq.is_ptecore = $5)))
+	and ($12 is null
+		or q.prediction = $12)
+group by
+	tq.id,
+	tq.question_id,
+	q.name,
+	t.beginning_time,
+	t.total_time,
+	b.id,
+	q.id,
+	q.created_at,
+	q.updated_at ,
+	op.answer_names
+order by 
+			case
+			    when $11 = true
+		and q.statement is not null then LENGTH(q.statement)
+		when $11 = true
+			and q.statement is null then 
+			        LENGTH(
+			            (string_to_array(
+			                replace(replace(op.answer_names,
+			'[',
+			''),
+			']',
+			''), 
+			                ','
+			            ))[1]
+			-- Access the first element
+			        )
+			else null
+		end asc,
+			case
+			    when $11 = false
+				and q.statement is not null then LENGTH(q.statement)
+				when $11 = false
+					and q.statement is null then 
+			        LENGTH(
+			            (string_to_array(
+			                replace(replace(op.answer_names,
+					'[',
+					''),
+					']',
+					''),
+					','
+			            ))[1]
+					-- Access the first element
+			        )
+					else null
+				end desc,
+				case
+					when $7 = 'asc' then q.id
+					else null
+				end asc,
+				case
+					when $7 = 'desc' then q.id
+					else null
+				end desc,
+				case
+					when $8 then cast(COUNT(apq.id) as integer)
+					else null
+				end desc
+			limit $2 offset $3
+    )
+-- Combine results into a single JSON object
+    select
+	json_build_object(
+            'total_questions',
+	total_questions_,
+	'test_questions',
+	json_agg(json_obj)
+        )
+    into
+	result
+from
+	test_questions_cte;
+
+return result;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_test_questions_of_user_by_test_name(varchar, int4, int4, int4, bool, varchar, varchar, bool, bool);
+
+create or replace
+function public.get_test_questions_of_user_by_test_name("TESTNAME" character varying,
+"PAGE" integer,
+"PAGESIZE" integer,
+"USERID" integer,
+"ISPRECORE" boolean,
+"SEARCHNAME" character varying,
+"ORDERBY" character varying,
+"HIGHFREQUENCY" boolean,
+"BOOKMARKED" boolean)
+ returns json
+ language plpgsql
+as $function$
+declare 
+    total_questions_ integer := 0;
+
+result json;
+
+begin
+-- Count total questions
+    select
+	count(tq.id)
+into
+	total_questions_
+from
+	public.test_questions tq
+left join public.test t on
+	tq.test_id = t.id
+where
+	t.test_name = $1;
+-- Fetch test questions and aggregate into JSON
+    with test_questions_cte as (
+select
+	json_build_object(
+            'TestQuestionTableId',
+	tq.id,
+	'QuestionId',
+	tq.question_id,
+	'QuestionName',
+	q.name,
+	'TestAttemptedCount',
+	cast((
+	select
+		count(aq.id)
+	from
+		public.attempted_questions aq
+	where
+		tq.id = aq.test_question_id
+		and aq.user_id = $4
+		and aq.is_ptecore = $5
+    ) as integer),
+	'BeginningTime',
+	t.beginning_time,
+	'TotalTime',
+	t.total_time,
+	'IsBookMarked',
+	exists (
+	select
+		1
+	from
+		public.bookmarks b
+	where
+		tq.id = b.test_question_id
+		and b.user_id = $4),
+	'AppearedCount',
+	cast(COUNT(apq.id) as integer),
+	'BookMarkedId',
+	b.id
+        ) as json_obj
+from
+	public.test_questions tq
+left join public.question q on
+	tq.question_id = q.id
+left join public.attempted_questions aq on
+	tq.id = aq.test_question_id
+	and aq.user_id = $4
+	and aq.is_ptecore = $5
+left join public.test t on
+	t.test_name = $1
+left join public.appeared_questions apq on
+	q.id = apq.question_id
+left join public.bookmarks b on
+	tq.id = b.test_question_id
+	and b.user_id = $4
+where
+	tq.test_id = t.id
+	and ($6 is null
+		or q.name ilike '%' || $6 || '%'
+		or q.id::character varying ilike '%' || $6 || '%')
+	and (
+        $9 is null
+		or 
+        $9 is false
+		or ($9 = true
+			and exists (
+			select
+				1
+			from
+				public.bookmarks b
+			where
+				tq.id = b.test_question_id
+				and b.user_id = $4
+        ))
+    )
+group by
+	tq.id,
+	tq.question_id,
+	q.name,
+	t.beginning_time,
+	t.total_time,
+	b.id,
+	q.id
+order by 
+	case
+		when $7 = 'asc' then q.id
+		else null
+	end asc,
+	case
+		when $7 = 'desc' then q.id
+		else null
+	end desc,
+	case
+		when $8 then cast(COUNT(apq.id) as integer)
+		else null
+	end desc
+limit $2 offset $3
+    )
+-- Combine results into a single JSON object
+    select
+	json_build_object(
+        'total_questions',
+	total_questions_,
+	'test_questions',
+	json_agg(json_obj)
+    )
+    into
+	result
+from
+	test_questions_cte;
+
+return result;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_test_questions_of_user_by_test_name_for_admin(varchar, int4, int4, bool, varchar, varchar, bool, bool);
+
+create or replace
+function public.get_test_questions_of_user_by_test_name_for_admin("TESTNAME" character varying,
+"PAGE" integer,
+"PAGESIZE" integer,
+"ISPRECORE" boolean,
+"SEARCHNAME" character varying,
+"ORDERBY" character varying,
+"HIGHFREQUENCY" boolean,
+"EASY" boolean)
+ returns json
+ language plpgsql
+as $function$
+declare 
+    total_questions_ integer := 0;
+
+result json;
+
+begin
+-- Count total questions
+    select
+	count(tq.id)
+into
+	total_questions_
+from
+	public.test_questions tq
+left join public.test t on
+	tq.test_id = t.id
+where
+	t.test_name = $1;
+-- Fetch test questions and aggregate into JSON
+    with test_questions_cte as (
+select
+	json_build_object(
+		'TestQuestionTableId',
+	tq.id,
+		'QuestionId',
+	tq.question_id,
+		'QuestionName',
+	q.name,
+		'BeginningTime',
+	t.beginning_time,
+		'TotalTime',
+	t.total_time,
+		'TestId',
+	q.test_id,
+		'Prediction',
+	q.prediction
+	-- Include test_id here
+	) as json_obj
+from
+	public.test_questions tq
+left join public.question q on
+	tq.question_id = q.id
+left join public.test t on
+	t.test_name = $1
+left join public.appeared_questions apq on
+	q.id = apq.question_id
+left join public.options op on
+	q.id = op.question_id
+where
+	tq.test_id = t.id
+	and ($5 is null
+		or q.name ilike '%' || $5 || '%'
+		or q.id::character varying ilike '%' || $5 || '%')
+group by
+	tq.id,
+	tq.question_id,
+	q.name,
+	t.beginning_time,
+	t.total_time,
+	q.id,
+	op.answer_names
+order by 
+	case
+		when $6 = 'asc' then q.id
+		else null
+	end asc,
+	case
+		when $6 = 'desc' then q.id
+		else null
+	end desc,
+	case
+		when $7 then cast(COUNT(apq.id) as integer)
+		else null
+	end desc,
+	case
+		when $8 = true
+			and q.statement is not null then LENGTH(q.statement)
+			when $8 = true
+				and q.statement is null then 
+	        LENGTH(
+	            (string_to_array(
+	                replace(replace(op.answer_names,
+				'[',
+				''),
+				']',
+				''),
+				','
+	            ))[1]
+				-- Access the first element
+	        )
+				else null
+			end asc,
+			case
+				when $8 = false
+					and q.statement is not null then LENGTH(q.statement)
+					when $8 = false
+						and q.statement is null then 
+	        LENGTH(
+	            (string_to_array(
+	                replace(replace(op.answer_names,
+						'[',
+						''),
+						']',
+						''),
+						','
+	            ))[1]
+						-- Access the first element
+	        )
+						else null
+					end desc
+				limit $2 offset $3
+    )
+-- Combine results into a single JSON object
+    select
+	json_build_object(
+    'total_questions',
+	total_questions_,
+	'test_questions',
+	json_agg(json_obj)
+    )
+    into
+	result
+from
+	test_questions_cte;
+
+return result;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_transaction_details();
+
+create or replace
+function public.get_transaction_details()
+ returns table("TransactionDetails" text)
+ language plpgsql
+as $function$
+	begin
+		return query
+		select
+	transaction_details
+from
+	public.admins
+where
+	id = 1;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_user_exam_date(int4);
+
+create or replace
+function public.get_user_exam_date("USERID" integer)
+ returns table("ExamDate" timestamp without time zone,
+"ExamTarget" text,
+"ExamCreatedDate" timestamp without time zone,
+"AttemptedTestCounts" json[])
+ language plpgsql
+as $function$
+declare
+    examDate_ timestamp;
+
+examTarget_ text;
+
+exam_date_created_at_ timestamp;
+
+attemptedCounts_ json[];
+
+begin
+-- Get exam date and target
+    select
+	exam_date,
+	exam_target,
+	exam_date_created_at
+    into
+	examDate_,
+	examTarget_,
+	exam_date_created_at_
+from
+	public.users
+where
+	id = $1;
+-- Get attempted test counts and store in JSON array
+    select
+	array_agg(row_to_json(test_counts))
+into
+	attemptedCounts_
+from
+	(
+	select
+		t.test_name,
+		coalesce(COUNT(distinct aq.test_question_id),
+		0) as count
+	from
+		public.test t
+	left join public.test_questions tq on
+		t.id = tq.test_id
+	left join public.attempted_questions aq 
+            on
+		tq.id = aq.test_question_id
+		and aq.user_id = $1
+		and DATE_TRUNC('day',
+		aq.created_at at TIME zone 'UTC') = DATE_TRUNC('day',
+		NOW() at TIME zone 'UTC')
+			and aq.created_at > (
+			select
+				u.exam_date_created_at
+			from
+				public.users u
+			where
+				u.id = $1)
+		group by
+			t.test_name
+    ) as test_counts;
+-- Return the results
+    return QUERY
+    select
+	examDate_,
+	examTarget_,
+	exam_date_created_at_,
+	attemptedCounts_;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_user_stored_analysis(int4, bool);
+
+create or replace
+function public.get_user_stored_analysis("USERID" integer,
+"PTE" boolean)
+ returns table("Analysis" jsonb,
+"LastUpdated" timestamp without time zone)
+ language plpgsql
+as $function$
+	begin
+		if ($2 = true) then
+			return query
+			select 
+			pte_stats,
+			last_updated_pte
+from
+	public.users
+where
+	id = $1;
+else
+			return query
+			select
+			academic_stats,
+			last_updated_acadamic
+from
+	public.users
+where
+	id = $1;
+end if;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.get_user_transactions(int4, varchar);
+
+create or replace
+function public.get_user_transactions("USERID" integer,
+"REFERENCENUMBER" character varying)
+ returns setof user_transactions
+ language plpgsql
+as $function$
+    begin
+        return QUERY
+        select
+	*
+from
+	public.user_transactions
+where
+	user_id = $1
+	and (reference_number ilike $2
+		or $2 is null)
+order by
+	created_at
+		;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.login_admin(varchar, varchar);
+
+create or replace
+function public.login_admin("EMAIL" character varying,
+"PASSWORD" character varying)
+ returns table("AdminId" integer,
+"AdminName" character varying,
+"Email" character varying,
+"CreatedAt" timestamp without time zone,
+"PortalId" integer,
+"Role" character varying,
+"Permissions" jsonb)
+ language plpgsql
+as $function$
+begin
+    return QUERY
+    with permission_details as (
+select
+	p.id as permission_id,
+	p."name" as permission_name,
+	mt.main_type_name,
+	st.sub_type_name
+from
+	public.permissions p
+join public.permission_main_type mt on
+	p.main_type = mt.id
+join public.permission_sub_types st on
+	p.sub_type = st.id
+where
+	p.id in (
+	select
+		permission_id
+	from
+		public.permissions_admin
+	where
+		admin_id = (
+		select
+			id
+		from
+			public.admins
+		where
+			email = $1
+			and pgp_sym_decrypt("password"::bytea,
+			'encryptingpassword')::character varying = $2
+            )
+        )
+    ),
+    aggregated_permissions as (
+select
+	main_type_name,
+	sub_type_name,
+	jsonb_agg(
+                jsonb_build_object(
+                    'PermissionId',
+	permission_id,
+	'PermissionName',
+	permission_name
+                )
+            ) as permissions
+from
+	permission_details
+group by
+	main_type_name,
+	sub_type_name
+    ),
+    main_type_aggregated as (
+select
+	main_type_name,
+	jsonb_object_agg(
+                sub_type_name,
+	permissions
+            ) as sub_type_permissions
+from
+	aggregated_permissions
+group by
+	main_type_name
+    ),
+    permissions_array as (
+select
+	jsonb_build_object(
+                main_type_name,
+	sub_type_permissions
+            ) as permission_object
+from
+	main_type_aggregated
+    )
+    select
+	a.id as "AdminId",
+	a."name" as "AdminName",
+	a.email as "Email",
+	a.created_at as "CreatedAt",
+	a.portal_id as "PortalId",
+	a.role as "Role",
+	coalesce(
+            (
+	select
+		jsonb_agg(permission_object)
+	from
+		permissions_array),
+	'[]'::jsonb
+        ) as "Permissions"
+from
+	public.admins a
+where
+	a.email = $1
+	and pgp_sym_decrypt(a."password"::bytea,
+	'encryptingpassword')::character varying = $2;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.login_admin(varchar, varchar, int4);
+
+create or replace
+function public.login_admin("EMAIL" character varying,
+"PASSWORD" character varying,
+"PORTALID" integer)
+ returns table("AdminId" integer,
+"AdminName" character varying,
+"Email" character varying,
+"CreatedAt" timestamp without time zone,
+"Permissions" jsonb)
+ language plpgsql
+as $function$
+    begin
+        return QUERY
+        with perms as (
+select
+	a.id as admin_id,
+	a."name" as admin_name,
+	a.email,
+	a.created_at,
+	mt.main_type_name,
+	st.sub_type_name,
+	p.id as permission_id,
+	p."name" as permission_name
+from
+	public.admins a
+left join 
+                public.permissions_admin pa on
+	a.id = pa.admin_id
+left join 
+                public.permissions p on
+	pa.permission_id = p.id
+left join 
+                public.permission_main_type mt on
+	p.main_type = mt.id
+left join 
+                public.permission_sub_types st on
+	p.sub_type = st.id
+where
+	a.email = $1
+	and pgp_sym_decrypt(a."password"::bytea,
+	'encryptingpassword')::character varying = $2
+		and a.portal_id = $3
+        )
+        select
+	admin_id as "AdminId",
+	admin_name as "AdminName",
+	email as "Email",
+	created_at as "CreatedAt",
+	coalesce(
+                jsonb_object_agg(
+                    main_type_name,
+	jsonb_object_agg(
+                        sub_type_name,
+	jsonb_agg(
+                            jsonb_build_object(
+                                'PermissionId',
+	permission_id,
+	'PermissionName',
+	permission_name
+                            )
+                        )
+                    )
+                ) filter (
+	where permission_id is not null),
+	'{}'::jsonb
+            ) as "Permissions"
+from
+	perms
+group by
+	admin_id,
+	admin_name,
+	email,
+	created_at;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.login_user(varchar, varchar);
+
+create or replace
+function public.login_user("EMAIL" character varying,
+"PASSWORD" character varying)
+ returns table("UserId" integer,
+"UserName" character varying,
+"Email" character varying,
+"CreatedAt" timestamp without time zone,
+"EmailVerified" boolean,
+"IsDeleted" boolean,
+"PhoneNumber" character varying,
+"CountryCode" character varying,
+"City" character varying,
+"ImageUrl" character varying,
+"ExamDate" timestamp without time zone,
+"EXAMTARGET" text,
+"IsSubscribed" boolean)
+ language plpgsql
+as $function$
+	begin
+		return query
+		select
+	id,
+	"name" ,
+	email,
+	created_at,
+	is_email_verified,
+	is_deleted ,
+	phone_number ,
+	country_code ,
+	city ,
+	image_url,
+	exam_date,
+	exam_target,
+	is_subscribed
+from
+	public.users
+where
+	email = $1
+	and pgp_sym_decrypt("password"::bytea,
+	'encryptingpassword')::character varying = $2
+	and is_deleted = false;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.login_user(varchar, varchar, int4, varchar, timestamptz);
+
+create or replace
+function public.login_user("EMAIL" character varying,
+"PASSWORD" character varying,
+"PORTALID" integer,
+"SESSIONID" character varying,
+"SESSIONEXPIRY" timestamp with time zone)
+ returns table("UserId" integer,
+"UserName" character varying,
+"Email" character varying,
+"CreatedAt" timestamp without time zone,
+"EmailVerified" boolean,
+"IsDeleted" boolean,
+"PhoneNumber" character varying,
+"CountryCode" character varying,
+"City" character varying,
+"ImageUrl" character varying,
+"ExamDate" timestamp without time zone,
+"EXAMTARGET" text,
+"IsSubscribed" boolean,
+"SubscriptionID" character varying,
+"SubscriptionEndTimeUTC" timestamp with time zone)
+ language plpgsql
+as $function$
+declare
+    userId_ integer;
+
+userName_ character varying;
+
+email_ character varying;
+
+createdAt_ timestamp without time zone;
+
+emailVerified_ boolean;
+
+isDeleted_ boolean;
+
+phoneNumber_ character varying;
+
+countryCode_ character varying;
+
+city_ character varying;
+
+imageUrl_ character varying;
+
+examDate_ timestamp without time zone;
+
+examTarget_ text;
+
+isSubscribed_ boolean;
+
+subscriptionId_ character varying;
+
+subscriptionEndTimeUTC_ timestamp with time zone;
+
+begin
+-- Attempt to retrieve the user record
+    select
+	u.id,
+	u."name",
+	u.email,
+	u.created_at,
+	u.is_email_verified,
+	u.is_deleted,
+	u.phone_number,
+	u.country_code,
+	u.city,
+	u.image_url,
+	u.exam_date,
+	u.exam_target,
+	u.is_subscribed,
+	u.subscription_id,
+	((u.subscription_time + (s.days || ' days')::interval) at TIME zone 'UTC')::timestamptz
+    into
+	userId_,
+	userName_,
+	email_,
+	createdAt_,
+	emailVerified_,
+	isDeleted_,
+	phoneNumber_,
+	countryCode_,
+	city_,
+	imageUrl_,
+	examDate_,
+	examTarget_,
+	isSubscribed_,
+	subscriptionId_,
+	subscriptionEndTimeUTC_
+from
+	public.users u
+left join public.subscriptions s on
+	u.subscription_id = s.id
+where
+	u.email = $1
+	and pgp_sym_decrypt(u."password"::bytea,
+	'encryptingpassword')::character varying = $2
+	and u.portal_id = $3
+	and u.is_deleted = false;
+-- If a record is found, update session details
+    if found then
+-- Update the user's session ID and session expiry
+        update
+	public.users
+set
+	sessionid = $4,
+	session_expiry = $5
+where
+	id = userId_;
+-- Return the individual variables
+        return QUERY
+select
+	userId_ as "UserId",
+	userName_ as "UserName",
+	email_ as "Email",
+	createdAt_ as "CreatedAt",
+	emailVerified_ as "EmailVerified",
+	isDeleted_ as "IsDeleted",
+	phoneNumber_ as "PhoneNumber",
+	countryCode_ as "CountryCode",
+	city_ as "City",
+	imageUrl_ as "ImageUrl",
+	examDate_ as "ExamDate",
+	examTarget_ as "EXAMTARGET",
+	isSubscribed_ as "IsSubscribed",
+	subscriptionId_ as "SubscriptionID",
+	subscriptionEndTimeUTC_ as "SubscriptionEndTimeUTC";
+end if;
+
+return;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.logout_user_by_admin(int4);
+
+create or replace
+function public.logout_user_by_admin("USERID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare 
+		rows_updated integer = 0;
+
+begin
+   		update
+	public.users
+set
+	session_expiry = null,
+		sessionid = null
+where
+	id = $1;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.remove_student_from_trash_by_admin(int4);
+
+create or replace
+function public.remove_student_from_trash_by_admin("USERID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+declare
+    rows_deleted integer = 0;
+
+begin
+    delete
+from
+	public.users
+where
+	id = $1;
+
+get diagnostics rows_deleted = ROW_COUNT;
+
+return rows_deleted > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.reset_mock_attempts_of_user(int4);
+
+create or replace
+function public.reset_mock_attempts_of_user("MOCKTESTATTEMPTID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare
+    row_deleted integer := 0;
+
+begin
+		delete
+from
+	public.mock_test_attempts
+where
+	id = $1;
+
+get diagnostics row_deleted = ROW_COUNT;
+
+return row_deleted > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.reset_password(varchar, varchar);
+
+create or replace
+function public.reset_password("EMAIL" character varying,
+"PASSWORD" character varying)
+ returns boolean
+ language plpgsql
+as $function$
+	declare 
+		rows_updated integer = 0;
+
+begin
+		update
+	public.users
+set
+	"password" = pgp_sym_encrypt($2,
+	'encryptingpassword',
+	'compress-algo=1') ,
+	updated_at = now()
+where
+	email = $1;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.reset_user_free_tokens();
+
+create or replace
+function public.reset_user_free_tokens()
+ returns void
+ language plpgsql
+as $function$
+begin
+-- Update all users to reset 'non_ai' and 'speaking' fields
+    update
+	public.users
+set
+	non_ai = 20,
+	speaking = 5;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.subtract_free_tokens(int4, varchar);
+
+create or replace
+function public.subtract_free_tokens("USERID" integer,
+"TYPE" character varying)
+ returns boolean
+ language plpgsql
+as $function$
+    declare 
+        rows_updated integer = 0;
+
+begin
+        if "TYPE" = 'non-ai' then
+            update
+	public.users
+set
+	non_ai = non_ai - 1
+where
+	id = "USERID";
+
+elsif "TYPE" = 'speaking' then
+            update
+	public.users
+set
+	speaking = speaking - 1
+where
+	id = "USERID";
+
+elsif "TYPE" = 'writing' then
+            update
+	public.users
+set
+	writing = writing - 1
+where
+	id = "USERID";
+end if;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.superadmin_buy(int4, varchar, varchar, int4, text);
+
+create or replace
+function public.superadmin_buy("ADMINID" integer,
+"PLANID" character varying,
+"NOOFACCOUNTUSED" character varying,
+"PORTALID" integer,
+"BOUGHTBUYANDREASON" text)
+ returns character varying
+ language plpgsql
+as $function$
+    declare
+        transaction_id_ varchar;
+
+begin
+        insert
+	into
+	public.whitelabel_transactions(
+            admin_id,
+	plan_id,
+	no_of_accounts_purchased,
+			portal_id,
+			bought_by_and_reason,
+			is_approved,
+			reference_number
+			
+        )
+values (
+            $1,
+            $2,
+            $3,
+            $4,
+			$5,
+			true,
+			public.generate_random_string(24)
+        )
+        returning id
+into
+	transaction_id_;
+
+perform public.add_white_label_total_account($4 ,
+$2 ,
+$3::integer,
+transaction_id_);
+
+return transaction_id_;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.superadmin_buy_subscription_for_user(varchar, int4, text);
+
+create or replace
+function public.superadmin_buy_subscription_for_user("SUBSCRIPTIONID" character varying,
+"USERID" integer,
+"BOUGHTBUYANDREASON" text)
+ returns character varying
+ language plpgsql
+as $function$
+    declare
+        transaction_id_ varchar;
+
+begin
+        insert
+	into
+	public.user_transactions(
+            subscription_id,
+	user_id,
+			bought_by_and_reason,
+			is_approved,
+			reference_number
+			
+        )
+values (
+            $1,
+            $2,
+            $3,
+			true,
+			public.generate_random_string(24)
+        )
+        returning id
+into
+	transaction_id_;
+
+update
+	public.users
+set 
+			subscription_id = $1,
+			is_subscribed = true
+where
+	id = $2;
+
+return transaction_id_;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.toggle_promo_code_status(varchar);
+
+create or replace
+function public.toggle_promo_code_status("PROMOCODEID" character varying)
+ returns boolean
+ language plpgsql
+as $function$
+declare
+    rows_updated integer = 0;
+
+begin
+    update
+	public.promo_codes
+set
+	active = not active
+where
+	id = $1;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.unsubscribe_user_on_timeend();
+
+create or replace
+function public.unsubscribe_user_on_timeend()
+ returns void
+ language plpgsql
+as $function$
+declare
+    subscription_days INT;
+
+subscription_start TIMESTAMPtz;
+
+subscription_end TIMESTAMPtz;
+
+current_time TIMESTAMPtz := NOW();
+
+user_id INT;
+
+begin
+-- Loop through all users with active subscriptions
+    for subscription_days,
+subscription_start,
+user_id in
+        select
+	s.days,
+	(u.subscription_time)::timestamptz,
+	u.id
+from
+	public.users u
+join public.subscriptions s on
+	u.subscription_id = s.id
+where
+	u.is_subscribed = true
+    loop
+	-- Calculate the subscription end time
+	subscription_end := (subscription_start + (subscription_days * interval '1 day'))::timestamptz;
+-- Check if the subscription has expired
+        if (NOW())::timestamptz > subscription_end then
+-- Update the user subscription details to indicate it has expired
+            update
+	public.users
+set
+	subscription_id = null,
+	is_subscribed = false,
+	subscription_time = null
+where
+	id = user_id;
+end if;
+end loop;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.update_admin(int4, varchar, varchar);
+
+create or replace
+function public.update_admin("ID" integer,
+"EMAIL" character varying,
+"NAME" character varying)
+ returns boolean
+ language plpgsql
+as $function$
+	declare 
+		rows_updated integer = 0;
+
+begin
+		update
+	public.admins
+set
+	email = $2 ,
+	"name" = $3,
+	updated_at = now()
+where
+	id = $1;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.update_mock_test(int4, varchar, int4, bool, text);
+
+create or replace
+function public.update_mock_test("MOCKTESTID" integer,
+"MOCKTESTNAME" character varying,
+"TOTALTIME" integer,
+"ISPTECORE" boolean,
+"INDIVIDUALTIMES" text)
+ returns boolean
+ language plpgsql
+as $function$
+	declare 
+		rows_updated integer = 0;
+
+begin
+    update
+	public.mock_test
+set
+	name = $2,
+	total_time = $3,
+	updated_at = now(),
+	core = $4,
+	individual_times = $5
+where
+	id = $1;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.update_mock_test_attempt(int4, timestamp);
+
+create or replace
+function public.update_mock_test_attempt("MOCKTESTATTEMPTID" integer,
+"ENDTIME" timestamp without time zone)
+ returns boolean
+ language plpgsql
+as $function$
+	declare 
+		rows_updated integer = 0;
+
+begin  
+		update
+	public.mock_test_attempts
+set 
+		end_time = $2,
+		total_marks_obtained = (
+		    with main_query as (
+	select
+		            tc.category_name,
+		            SUM(q.time_allowed) as total_time,
+		            SUM(case when maq.mock_test_question_id is not null then q.time_allowed else 0 end) as attempted_time,
+		            COUNT(q.id)::int4 as total_questions,
+		            coalesce(SUM(case when maq.users_response is not null 
+		                              and maq.users_response <> '{}' 
+		                              and maq.users_response <> '"{}"' 
+		                              and maq.users_response <> '' 
+		                         then 1 else 0 end),
+		0)::int4 as attempted_questions,
+		            coalesce(SUM(case when maq.marks_obtained is not null 
+		                              then (maq.marks_obtained::numeric / q.total_marks) * 100 
+		                         else 0 end),
+		0) as scores_percentage
+	from
+		            public.test_categories tc
+	left join
+		            public.test t on
+		tc.id = t.category_id
+	left join
+		            public.question q on
+		t.id = q.test_id
+	left join
+		            public.mock_test_questions mtq on
+		q.id = mtq.question_id
+	left join
+		            public.mock_attempted_questions maq on
+		mtq.id = maq.mock_test_question_id
+		and maq.mock_test_attempt_id = $1
+	group by
+		            tc.category_name
+		    ),
+		    sub_query as (
+	select
+		            tc.category_name,
+		            t.test_name,
+		            COUNT(q.id)::int4 as total_questions,
+		            coalesce(SUM(case when maq.users_response is not null 
+		                              and maq.users_response <> '{}' 
+		                              and maq.users_response <> '"{}"' 
+		                              and maq.users_response <> '' 
+		                         then 1 else 0 end),
+		0)::int4 as attempted_questions,
+		            coalesce(SUM(case when maq.marks_obtained is not null 
+		                              then (maq.marks_obtained::numeric / q.total_marks) * 100 
+		                         else 0 end),
+		0) as scores_percentage,
+		            SUM(q.time_allowed) as total_time_allowed,
+		            coalesce(SUM(maq.time_taken),
+		0) as total_time_taken
+	from
+		            public.test_categories tc
+	left join
+		            public.test t on
+		tc.id = t.category_id
+	left join
+		            public.question q on
+		t.id = q.test_id
+	left join
+		            public.mock_test_questions mtq on
+		q.id = mtq.question_id
+	left join
+		            public.mock_attempted_questions maq on
+		mtq.id = maq.mock_test_question_id
+		and maq.mock_test_attempt_id = $1
+	group by
+		            t.test_name,
+		            tc.category_name
+		    ),
+		    aggregated_sub_query as (
+	select
+		            category_name,
+		            json_agg(
+		                json_build_object(
+		                    'test_name',
+		test_name,
+		                    'total_questions',
+		total_questions,
+		                    'attempted_questions',
+		attempted_questions,
+		                    'scores_percentage',
+		scores_percentage,
+		                    'total_time_allowed',
+		total_time_allowed,
+		                    'total_time_taken',
+		total_time_taken
+		                )
+	order by
+		test_name
+		            ) as subcategories
+	from
+		            sub_query
+	group by
+		            category_name
+		    )
+	select
+		json_agg(
+		        json_build_object(
+		            'category_name',
+		main_query.category_name,
+		            'total_time',
+		main_query.total_time,
+		            'attempted_time',
+		main_query.attempted_time,
+		            'total_questions',
+		main_query.total_questions,
+		            'attempted_questions',
+		main_query.attempted_questions,
+		            'scores_percentage',
+		main_query.scores_percentage,
+		            'subcategories',
+		aggregated_sub_query.subcategories
+		        )
+		    ) as result
+	from
+		main_query
+	left join aggregated_sub_query on
+		main_query.category_name = aggregated_sub_query.category_name
+		),
+		updated_at = now(),
+		status = 'completed'
+where
+	id = $1;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.update_option(int4, varchar, varchar, int4, varchar);
+
+create or replace
+function public.update_option("OPTIONID" integer,
+"OPTIONNAMES" character varying,
+"ANSWERNAMES" character varying,
+"QUESTIONID" integer,
+"OPTIONTEXT" character varying)
+ returns boolean
+ language plpgsql
+as $function$
+	declare 
+		rows_updated integer = 0;
+
+begin
+		update
+	public."options"
+set
+	option_names = $2,
+	answer_names = $3,
+	question_id = $4,
+	updated_at = now() ,
+	option_text = $5
+where
+	id = $1;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.update_order_id_mock_test_questions(int4, int4);
+
+create or replace
+function public.update_order_id_mock_test_questions("CURRENTROWID" integer,
+"SWAPROWID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+declare
+    temp_order_id integer;
+
+rows_updated integer = 0;
+
+begin
+-- Retrieve the order_id for the row specified by CURRENTROWID
+    select
+	order_id
+into
+	temp_order_id
+from
+	public.mock_test_questions
+where
+	id = $1;
+-- Update order_id for the row specified by CURRENTROWID with the order_id of the row specified by SWAPROWID
+    update
+	public.mock_test_questions
+set
+	order_id = (
+	select
+		order_id
+	from
+		public.mock_test_questions
+	where
+		id = $2)
+where
+	id = $1;
+-- Update order_id for the row specified by SWAPROWID with the saved order_id value
+    update
+	public.mock_test_questions
+set
+	order_id = temp_order_id
+where
+	id = $2;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.update_order_id_mock_tests(int4, int4);
+
+create or replace
+function public.update_order_id_mock_tests("CURRENTROWID" integer,
+"SWAPROWID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+declare
+    temp_order_id integer;
+
+rows_updated integer = 0;
+
+begin
+-- Retrieve the order_id for the row specified by CURRENTROWID
+    select
+	order_id
+into
+	temp_order_id
+from
+	public.mock_test
+where
+	id = $1;
+-- Update order_id for the row specified by CURRENTROWID with the order_id of the row specified by SWAPROWID
+    update
+	public.mock_test
+set
+	order_id = (
+	select
+		order_id
+	from
+		public.mock_test
+	where
+		id = $2)
+where
+	id = $1;
+-- Update order_id for the row specified by SWAPROWID with the saved order_id value
+    update
+	public.mock_test
+set
+	order_id = temp_order_id
+where
+	id = $2;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.update_order_id_test_category(int4, int4);
+
+create or replace
+function public.update_order_id_test_category("CURRENTROWID" integer,
+"SWAPROWID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+declare
+    temp_order_id integer;
+
+rows_updated integer = 0;
+
+begin
+-- Retrieve the order_id for the row specified by CURRENTROWID
+    select
+	order_id
+into
+	temp_order_id
+from
+	public.test_categories
+where
+	id = $1;
+-- Update order_id for the row specified by CURRENTROWID with the order_id of the row specified by SWAPROWID
+    update
+	public.test_categories
+set
+	order_id = (
+	select
+		order_id
+	from
+		public.test_categories
+	where
+		id = $2)
+where
+	id = $1;
+-- Update order_id for the row specified by SWAPROWID with the saved order_id value
+    update
+	public.test_categories
+set
+	order_id = temp_order_id
+where
+	id = $2;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.update_order_id_test_questions(int4, int4);
+
+create or replace
+function public.update_order_id_test_questions("CURRENTROWID" integer,
+"SWAPROWID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+declare
+    temp_order_id integer;
+
+rows_updated integer = 0;
+
+begin
+-- Retrieve the order_id for the row specified by CURRENTROWID
+    select
+	order_id
+into
+	temp_order_id
+from
+	public.test_questions
+where
+	id = $1;
+-- Update order_id for the row specified by CURRENTROWID with the order_id of the row specified by SWAPROWID
+    update
+	public.test_questions
+set
+	order_id = (
+	select
+		order_id
+	from
+		public.test_questions
+	where
+		id = $2)
+where
+	id = $1;
+-- Update order_id for the row specified by SWAPROWID with the saved order_id value
+    update
+	public.test_questions
+set
+	order_id = temp_order_id
+where
+	id = $2;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.update_order_id_tests(int4, int4);
+
+create or replace
+function public.update_order_id_tests("CURRENTROWID" integer,
+"SWAPROWID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+declare
+    temp_order_id integer;
+
+rows_updated integer = 0;
+
+begin
+-- Retrieve the order_id for the row specified by CURRENTROWID
+    select
+	order_id
+into
+	temp_order_id
+from
+	public.test
+where
+	id = $1;
+-- Update order_id for the row specified by CURRENTROWID with the order_id of the row specified by SWAPROWID
+    update
+	public.test
+set
+	order_id = (
+	select
+		order_id
+	from
+		public.test
+	where
+		id = $2)
+where
+	id = $1;
+-- Update order_id for the row specified by SWAPROWID with the saved order_id value
+    update
+	public.test
+set
+	order_id = temp_order_id
+where
+	id = $2;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.update_portal(int4, varchar, varchar);
+
+create or replace
+function public.update_portal("PORTALID" integer,
+"PORTALLINK" character varying,
+"PORTALOWNERNAME" character varying)
+ returns boolean
+ language plpgsql
+as $function$
+	declare 
+		rows_updated integer = 0;
+
+begin
+		update
+	public.portal
+set 
+			portal_link = $2,
+			portal_owner_name = $3,
+	updated_at = now()
+where
+	id = $1;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.update_portal_configuration(int4, bool, bool, bool, bool, bool, bool);
+
+create or replace
+function public.update_portal_configuration("PORTALID" integer,
+"STRATEGYVIDEOVISIBLE" boolean,
+"TEMPLATEVISIBLE" boolean,
+"GRAMMARVISIBLE" boolean,
+"SELFSTRATEGYVIDEOVISIBLE" boolean,
+"SELFTEMPLATEVISIBLE" boolean,
+"SELFGRAMMARVISIBLE" boolean)
+ returns boolean
+ language plpgsql
+as $function$
+	declare 
+		rows_updated integer = 0;
+
+begin
+		update
+	public.portal
+set 
+			strategy_video_visible = $2,
+			template_visible = $3,
+			grammar_visible = $4,
+			self_strategy_video_visible = $5,
+			self_template_visible = $6,
+			self_grammar_visible = $7,
+			updated_at = now()
+where
+	id = $1;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.update_portal_info(int4, varchar, varchar, varchar, varchar, varchar, varchar, varchar, varchar, varchar);
+
+create or replace
+function public.update_portal_info("PORTALID" integer,
+"FACEBOOKLINK" character varying,
+"WHATSAPPLINK" character varying,
+"TELEGRAMLINK" character varying,
+"PHONENO" character varying,
+"SUPPORTEMAIL" character varying,
+"SUPPORTADDRESS" character varying,
+"PORTALLOGO" character varying,
+"PORTALFAVICON" character varying,
+"LANDINGIMG" character varying)
+ returns boolean
+ language plpgsql
+as $function$
+	declare 
+		rows_updated integer = 0;
+
+begin
+		
+		
+		update
+	public.portal
+set
+	updated_at = now(),
+	facebook_link = $2,
+	whatsapp_link = $3,
+	telegram_link = $4,
+	phone_no = $5,
+		support_email = $6,
+	support_address = $7,
+	portal_logo = $8,
+	portal_favicon = $9,
+	landing_img = $10
+where
+	id = $1;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.update_prediction_file(int4, varchar, varchar, int4, bool);
+
+create or replace
+function public.update_prediction_file("FILEID" integer,
+"NAME" character varying,
+"FILEURL" character varying,
+"PRIORITY" integer,
+"CORE" boolean)
+ returns boolean
+ language plpgsql
+as $function$
+	declare 
+		rows_updated integer = 0;
+
+begin
+		update
+	public.prediction_file
+set
+	name = $2,
+	file_url = $3,
+	priority = $4,
+	core = $5,
+	updated_at = now()
+where
+	id = $1;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.update_question(int4, varchar, varchar, int4, varchar, varchar, varchar, int4, varchar, bool);
+
+create or replace
+function public.update_question("QUESTIONID" integer,
+"QUESTIONNAME" character varying,
+"QUESTIONSTATEMENT" character varying,
+"TOTALMARKS" integer,
+"AUDIOOBJECT" character varying,
+"MAJORASPECTS" character varying,
+"MINORASPECTS" character varying,
+"TESTIDFORCATEGORY" integer,
+"QUESTIONIMAGE" character varying,
+"PREDICTION" boolean)
+ returns boolean
+ language plpgsql
+as $function$
+	declare 
+		rows_updated integer = 0;
+
+begin
+	    update
+	public.question
+set
+	        "name" = $2,
+	        "statement" = $3,
+	        total_marks = $4,
+	        updated_at = now(),
+	        audio_object = $5,
+	        major_aspects = $6,
+	minor_aspects = $7,
+	test_id = $8,
+	question_image = $9,
+			prediction = $10
+where
+	id = $1;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.update_question_prediction(int4);
+
+create or replace
+function public.update_question_prediction("QUESTIONID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare 
+		rows_updated integer = 0;
+
+begin
+		update
+	public.question
+set
+	prediction = not prediction,
+	updated_at = now()
+where
+	id = $1;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.update_strategy_video(int4, varchar, varchar, varchar, varchar, int4, varchar, bool, varchar, int4);
+
+create or replace
+function public.update_strategy_video("ID" integer,
+"TITLE" character varying,
+"AUTHOR" character varying,
+"YT_LINK" character varying,
+"CATEGORY" character varying,
+"PRIORITY" integer,
+"LANGUAGE" character varying,
+"CORE" boolean,
+"THUMBNAIL" character varying,
+"PORTALID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+declare
+	rows_updated integer := 0;
+
+begin
+	update
+	public.strategy_video
+set
+		title = $2,
+		author = $3,
+		yt_link = $4,
+		category = $5,
+		priority = $6,
+		"language" = $7,
+		core = $8,
+		thumbnail = $9,
+		updated_at = now()
+where
+		id = $1
+	and portal_id = $10;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.update_student(int4, varchar, varchar, varchar, varchar, varchar, varchar);
+
+create or replace
+function public.update_student("USERID" integer,
+"NAME" character varying,
+"IMAGEOFUSER" character varying,
+"PASSWORD" character varying,
+"TYPE" character varying,
+"TARGET" character varying,
+"NOTE" character varying)
+ returns table("Updated" boolean,
+"UserId" integer,
+"UserName" character varying,
+"Email" character varying,
+"CreatedAt" timestamp without time zone,
+"EmailVerified" boolean,
+"IsDeleted" boolean,
+"PhoneNumber" character varying,
+"CountryCode" character varying,
+"City" character varying,
+"ImageUrl" character varying,
+"Type" character varying,
+"Target" text,
+"StudentNote" character varying)
+ language plpgsql
+as $function$
+	declare 
+		rows_updated integer = 0;
+
+begin
+		update
+	public.users
+set
+	"name" = $2 ,
+	updated_at = now() ,
+	image_url = $3 , 
+		password = pgp_sym_encrypt($4,
+	'encryptingpassword',
+	'compress-algo=1'),
+		type = $5,
+		exam_target = $6,
+		student_note = $7
+where
+	id = $1;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return query 
+		select
+	rows_updated > 0 as Updated,
+	id,
+	"name" ,
+	email,
+	created_at,
+	is_email_verified,
+	is_deleted ,
+	phone_number ,
+	country_code ,
+	city ,
+	image_url,
+	type,
+	exam_target,
+	student_note
+from
+	public.users
+where
+	id = $1;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.update_subscription(varchar, varchar, varchar, int4, int4, varchar);
+
+create or replace
+function public.update_subscription("ID" character varying,
+"NAME" character varying,
+"DESC" character varying,
+"PRICE_PKR" integer,
+"DAYS" integer,
+"DISCOUNT" character varying)
+ returns boolean
+ language plpgsql
+as $function$
+	declare 
+		rows_updated integer = 0;
+
+begin
+		update
+	public.subscriptions
+set
+	"name" = $2,
+	"desc" = $3,
+	price_pkr = $4,
+	days = $5,
+	discount = $6,
+	updated_at = now()
+where
+	id = $1;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.update_template(int4, varchar, varchar, bool, int4);
+
+create or replace
+function public.update_template("TEMPLATEID" integer,
+"NAME" character varying,
+"PDFURL" character varying,
+"ISTEMPLATE" boolean,
+"PORTALID" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare 
+		rows_updated integer = 0;
+
+begin
+		update
+	public.templates_and_grammar_pdfs
+set
+	name = $2,
+	pdf_url = $3 ,
+	is_template = $4 ,
+	updated_at = now()
+where
+	id = $1
+	and portal_id = $5;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.update_test(int4, int4, varchar, bool, int4, int4);
+
+create or replace
+function public.update_test("TESTID" integer,
+"CATEGORYID" integer,
+"TESTNAME" character varying,
+"ISANSWERFIXED" boolean,
+"BEGINNINGTIME" integer,
+"TOTALTIME" integer)
+ returns boolean
+ language plpgsql
+as $function$
+	declare 
+		rows_updated integer = 0;
+
+begin
+    update
+	public.test
+set
+	category_id = $2,
+	test_name = $3,
+	is_answer_fixed = $4,
+	beginning_time = $5,
+	total_time = $6,
+	updated_at = now()
+where
+	id = $1;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.update_test_category(int4, varchar);
+
+create or replace
+function public.update_test_category("TESTCATEGORYID" integer,
+"CATEGORYNAME" character varying)
+ returns boolean
+ language plpgsql
+as $function$
+	declare 
+		rows_updated integer = 0;
+
+begin
+		update
+	public.test_categories
+set
+	category_name = $2,
+	updated_at = now()
+where
+	id = $1;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.update_transaction_details_super_admin(text);
+
+create or replace
+function public.update_transaction_details_super_admin("TransactionDetails" text)
+ returns boolean
+ language plpgsql
+as $function$
+	declare 
+		rows_updated integer = 0;
+
+begin
+		update
+	public.admins
+set
+	transaction_details = $1
+where
+	id = 1;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.update_user(int4, varchar, varchar, varchar, varchar, varchar);
+
+create or replace
+function public.update_user("ID" integer,
+"NAME" character varying,
+"PHONENUMBER" character varying,
+"COUNTRYCODE" character varying,
+"CITY" character varying,
+"IMAGEOFUSER" character varying)
+ returns table("Updated" boolean,
+"UserId" integer,
+"UserName" character varying,
+"Email" character varying,
+"CreatedAt" timestamp without time zone,
+"EmailVerified" boolean,
+"IsDeleted" boolean,
+"PhoneNumber" character varying,
+"CountryCode" character varying,
+"City" character varying,
+"ImageUrl" character varying)
+ language plpgsql
+as $function$
+	declare 
+		rows_updated integer = 0;
+
+begin
+		update
+	public.users
+set
+	"name" = $2 ,
+	updated_at = now() ,
+	phone_number = $3 ,
+	country_code = $4 ,
+	city = $5 ,
+	image_url = $6
+where
+	id = $1;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return query 
+		select
+	rows_updated > 0 as Updated,
+	id,
+	"name" ,
+	email,
+	created_at,
+	is_email_verified,
+	is_deleted ,
+	phone_number ,
+	country_code ,
+	city ,
+	image_url
+from
+	public.users
+where
+	id = $1;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.update_user_analysis_in_user(int4, jsonb, bool);
+
+create or replace
+function public.update_user_analysis_in_user("USERID" integer,
+"ANALYSIS" jsonb,
+"ISPTE" boolean)
+ returns void
+ language plpgsql
+as $function$
+	begin
+		if ($3 = true) then
+			update
+	public.users
+set
+	pte_stats = $2,
+			last_updated_pte = now()
+where
+	id = $1
+			;
+else 
+			update
+	public.users
+set
+	academic_stats = $2,
+			last_updated_acadamic = now()
+where
+	id = $1
+			;
+end if;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.update_user_exam_date(int4, timestamp, text);
+
+create or replace
+function public.update_user_exam_date("USERID" integer,
+"EXAMDATE" timestamp without time zone,
+"EXAMTARGET" text)
+ returns table("ExamDate" timestamp without time zone,
+"ExamTarget" text)
+ language plpgsql
+as $function$
+	declare
+		exam_date_ timestamp;
+
+exam_target_ text;
+
+begin
+		update
+	public.users
+set
+	exam_date = $2,
+		exam_target = $3,
+		exam_date_created_at = now()
+where
+	id = $1
+        returning exam_date,
+	exam_target
+into
+	exam_date_,
+	exam_target_;
+
+return query
+        select
+	exam_date_,
+	exam_target_;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.update_user_transaction(varchar, int4, int4, varchar, varchar, varchar, varchar);
+
+create or replace
+function public.update_user_transaction("ID" character varying,
+"USER_ID" integer,
+"SUBSCRIPTION_ID" integer,
+"STATUS" character varying,
+"REQUEST_PAYLOAD" character varying,
+"RESPONSE_PAYLOAD" character varying,
+"BANK_ALFALAH_SUBSCRIPTION_ID" character varying)
+ returns boolean
+ language plpgsql
+as $function$
+    declare
+        rows_updated integer = 0;
+
+begin
+        update
+	public.user_transactions
+set
+	user_id = $2,
+	subscription_id = $3,
+	status = $4,
+	request_payload = $5,
+	response_payload = $6,
+	bank_alfalah_subscription_id = $7,
+	updated_at = now()
+where
+	id = $1;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.update_vocab(int4, varchar);
+
+create or replace
+function public.update_vocab("ID" integer,
+"TYPE" character varying)
+ returns boolean
+ language plpgsql
+as $function$
+	declare 
+		rows_updated integer = 0;
+
+begin
+		update
+	public.vocab_bank
+set
+	type = $2,
+	updated_at = now()
+where
+	id = $1;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.user_analysis(int4, bool);
+
+create or replace
+function public.user_analysis("USERID" integer,
+"ISPTE" boolean)
+ returns jsonb
+ language plpgsql
+as $function$
+	declare 
+	finalr jsonb;
+
+begin
+	select
+	jsonb_object_agg(category_name,
+	category_tests) as result
+from
+	(
+	select
+		category_name,
+		jsonb_build_object(
+	        'Tests',
+		jsonb_object_agg(test_name,
+		jsonb_build_object('TotalCount',
+		count,
+		'attemptedcount',
+		attemptedcount )),
+		'Total Questions',
+		sum (count),
+		'Total Attempted Questions',
+		sum (attemptedcount)
+	        ) as category_tests
+	from
+		(
+		select
+			tc.category_name,
+			t.test_name,
+			coalesce(COUNT(distinct tq.id),
+			0) as count,
+			coalesce(COUNT(distinct aq.test_question_id),
+			0) as attemptedcount
+		from
+			test_questions tq
+		left join
+	            test t on
+			tq.test_id = t.id
+		left join
+	            test_categories tc on
+			t.category_id = tc.id
+		left join 
+	        	attempted_questions aq on
+			tq.id = aq.test_question_id
+			and aq.user_id = $1
+		group by
+			tc.category_name,
+			t.test_name
+	    ) as sub
+	group by
+		category_name
+	) as resultr
+into
+	finalr;
+
+return finalr;
+end;
+
+$function$
+;
+-- DROP FUNCTION public.verify_email(varchar);
+
+create or replace
+function public.verify_email("EMAIL" character varying)
+ returns boolean
+ language plpgsql
+as $function$
+	  declare
+	  rows_updated integer := 0;
+
+begin
+		  update
+	public."users"
+set
+	is_email_verified = true
+where
+	email = $1;
+
+get diagnostics rows_updated = ROW_COUNT;
+
+return rows_updated > 0;
+end;
+
+$function$
+;
