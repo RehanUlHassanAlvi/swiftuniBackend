@@ -5,6 +5,8 @@ module.exports.checkSession = async (req, res, next) => {
     req.session.adminID,
   ]);
 
+  console.log('adminId: ', adminID)
+
   if (!req.session.adminID || !rows[0].check_admin) {
     res.setHeader(
       "Strict-Transport-Security",
