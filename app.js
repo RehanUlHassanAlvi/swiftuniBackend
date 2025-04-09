@@ -53,9 +53,9 @@ app.use(
     saveUninitialized: false,
     name: "sessionId",
     cookie: {
-      // path: "/",
+      path: "/",
       sameSite: "none",
-      // httpOnly: true, //if true prevents client-side js from reading cookie
+      httpOnly: true, //if true prevents client-side js from reading cookie
       secure: true,
       maxAge: 86400000,
     },
