@@ -1,6 +1,3 @@
-// app.js
-require('dotenv').config(); // Load environment variables FIRST
-
 var express = require("express");
 var path = require("path");
 var cors = require("./middlewares/cors");
@@ -11,7 +8,7 @@ const bodyParser = require("body-parser");
 const helmet = require("helmet");
 const FileStore = require("session-file-store")(session);
 var indexRouter = require("./routes/index");
-
+// var cors = require("cors");
 var app = express();
 app.use(express.json({ limit: "100mb" }));
 app.use(bodyParser.json({ limit: "100mb" }));
@@ -19,6 +16,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.json());
 
 app.use(express.urlencoded({ extended: true }));
+
 
 // view engine setup
 app.use(cors);
