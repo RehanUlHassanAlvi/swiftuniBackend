@@ -54,7 +54,7 @@ app.use(
     name: "sessionId",
     cookie: {
       path: "/",
-      sameSite: "none",
+      sameSite: "lax",
       httpOnly: true, //if true prevents client-side js from reading cookie
       secure: true,
       maxAge: 86400000,
