@@ -4062,7 +4062,7 @@ module.exports.createTestValidate = (req, res, next) => {
       "string.base": "Test type must be a string",
       "any.only": "Test type must be either 'Academic' or 'General'",
     }),
-    category: Joi.string().valid("Listening", "Reading", "Writing", "Speaking").optional().messages({
+    category: Joi.string().valid("Listening", "Reading", "Writing", "Speaking","text-question").optional().messages({
       "string.base": "Category must be a string",
       "any.only": "Category must be one of 'Listening', 'Reading', 'Writing', or 'Speaking'",
     }),

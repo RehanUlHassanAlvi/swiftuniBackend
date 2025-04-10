@@ -55,6 +55,6 @@ router.post(
 
 
 
-router.post("/create", checkSession, input_validator.createTestValidate, createTest);
+router.post("/create", checkSession,  createTest);
 
 module.exports = router;
