@@ -53,10 +53,10 @@ app.use(
     saveUninitialized: false,
     name: "sessionId",
     cookie: {
-      path: "/",
+      //path: "/",
       sameSite: "lax",
-      httpOnly: true, //if true prevents client-side js from reading cookie
-      secure: true,
+      //httpOnly: true, //if true prevents client-side js from reading cookie
+      secure: false,
       maxAge: 86400000,
     },
   })
