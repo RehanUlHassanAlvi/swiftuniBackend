@@ -17,7 +17,6 @@ app.use(express.json());
 
 app.use(express.urlencoded({ extended: true }));
 
-
 // view engine setup
 app.use(cors);
 // app.use(
@@ -52,18 +51,13 @@ app.use(
     resave: false,
     saveUninitialized: false,
     name: "sessionId",
-    // cookie: {
-    //   //path: "/",
-    //   sameSite: "lax",
-    //   //httpOnly: true, //if true prevents client-side js from reading cookie
-    //   secure: false,
-    //   maxAge: 86400000,
-    // },
     cookie: {
-      sameSite: "none", // required for cross-origin
-      secure: false,    // should be true in production
+      // path: "/",
+      sameSite: "none",
+      // httpOnly: true, //if true prevents client-side js from reading cookie
+      secure: true,
       maxAge: 86400000,
-    }
+    },
   })
 );
 app.use("/", indexRouter);
