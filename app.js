@@ -52,13 +52,18 @@ app.use(
     resave: false,
     saveUninitialized: false,
     name: "sessionId",
+    // cookie: {
+    //   //path: "/",
+    //   sameSite: "lax",
+    //   //httpOnly: true, //if true prevents client-side js from reading cookie
+    //   secure: false,
+    //   maxAge: 86400000,
+    // },
     cookie: {
-      //path: "/",
-      sameSite: "lax",
-      //httpOnly: true, //if true prevents client-side js from reading cookie
-      secure: false,
+      sameSite: "none", // required for cross-origin
+      secure: false,    // should be true in production
       maxAge: 86400000,
-    },
+    }
   })
 );
 app.use("/", indexRouter);
