@@ -4055,23 +4055,19 @@ module.exports.submitIELTSAnswerValidate = (req, res, next) => {
 // Validation middleware for the create test endpoint
 module.exports.createTestValidate = (req, res, next) => {
   const schema = Joi.object({
-    testName: Joi.string().required().messages({
+    testName: Joi.string().optional().messages({
       "string.base": "Test name must be a string",
-      "any.required": "Test name is required",
     }),
-    testType: Joi.string().valid("Academic", "General").required().messages({
+    testType: Joi.string().valid("Academic", "General").optional().messages({
       "string.base": "Test type must be a string",
       "any.only": "Test type must be either 'Academic' or 'General'",
-      "any.required": "Test type is required",
     }),
-    category: Joi.string().valid("Listening", "Reading", "Writing", "Speaking").required().messages({
+    category: Joi.string().valid("Listening", "Reading", "Writing", "Speaking").optional().messages({
       "string.base": "Category must be a string",
       "any.only": "Category must be one of 'Listening', 'Reading', 'Writing', or 'Speaking'",
-      "any.required": "Category is required",
     }),
-    totalTime: Joi.number().integer().required().messages({
+    totalTime: Joi.number().integer().optional().messages({
       "number.base": "Total time must be a number",
-      "any.required": "Total time is required",
     }),
     audioUrl: Joi.string().allow(null).optional().messages({
       "string.base": "Audio URL must be a string",
@@ -4079,9 +4075,8 @@ module.exports.createTestValidate = (req, res, next) => {
     sections: Joi.array()
       .items(
         Joi.object({
-          sectionNumber: Joi.number().integer().required().messages({
+          sectionNumber: Joi.number().integer().optional().messages({
             "number.base": "Section number must be a number",
-            "any.required": "Section number is required",
           }),
           instructions: Joi.string().allow(null).optional().messages({
             "string.base": "Instructions must be a string",
@@ -4094,22 +4089,19 @@ module.exports.createTestValidate = (req, res, next) => {
               Joi.object({
                 type: Joi.string()
                   .valid("fill-blank", "mcq", "selection", "matching", "completion")
-                  .required()
+                  .optional()
                   .messages({
                     "string.base": "Question type must be a string",
                     "any.only": "Question type must be one of 'fill-blank', 'mcq', 'selection', 'matching', or 'completion'",
-                    "any.required": "Question type is required",
                   }),
-                questionHtml: Joi.string().required().messages({
+                questionHtml: Joi.string().optional().messages({
                   "string.base": "Question HTML must be a string",
-                  "any.required": "Question HTML is required",
                 }),
                 options: Joi.array()
                   .items(
                     Joi.object({
-                      optionHtml: Joi.string().required().messages({
+                      optionHtml: Joi.string().optional().messages({
                         "string.base": "Option HTML must be a string",
-                        "any.required": "Option HTML is required",
                       }),
                     })
                   )
@@ -4118,16 +4110,14 @@ module.exports.createTestValidate = (req, res, next) => {
                   options: Joi.array()
                     .items(
                       Joi.object({
-                        optionHtml: Joi.string().required().messages({
+                        optionHtml: Joi.string().optional().messages({
                           "string.base": "Option HTML must be a string",
-                          "any.required": "Option HTML is required",
                         }),
                       })
                     )
-                    .required()
+                    .optional()
                     .messages({
                       "array.base": "Selections options must be an array",
-                      "any.required": "Selections options are required",
                     }),
                   correctMatches: Joi.object().optional(),
                 }).optional(),
@@ -4140,17 +4130,15 @@ module.exports.createTestValidate = (req, res, next) => {
                   }),
               })
             )
-            .required()
+            .optional()
             .messages({
               "array.base": "Questions must be an array",
-              "any.required": "Questions are required",
             }),
         })
       )
-      .required()
+      .optional()
       .messages({
         "array.base": "Sections must be an array",
-        "any.required": "Sections are required",
       }),
   });
 
