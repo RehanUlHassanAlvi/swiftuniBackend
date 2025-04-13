@@ -164,7 +164,7 @@ module.exports.createTestService = async (testData) => {
       const questionsResponse = [];
       for (let i = 0; i < questions.length; i++) {
         const question = questions[i];
-        const { type, questionHtml, options, selections, answer } = question;
+        const { type, questionHtml, options, selections, answer,image_url } = question;
 
         // Create the question
         const questionResult = await query(
@@ -175,7 +175,7 @@ module.exports.createTestService = async (testData) => {
             null, // statement (not used since we have questionHtml)
             null, // cue_card_text (not applicable)
             questionHtml,
-            null, // image_url
+            image_url, // image_url
             1, // total_marks (default to 1)
             answer ? (Array.isArray(answer) ? answer.join(", ") : answer) : null, // sample_answer
             null, // time_allowed (optional)
