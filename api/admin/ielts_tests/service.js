@@ -162,7 +162,9 @@ module.exports.createTestService = async (testData) => {
 
       // Create questions for the section
       const questionsResponse = [];
-      for (let i = 0; i < questions.length; i++) {
+      if(questions)
+      {
+        for (let i = 0; i < questions.length; i++) {
         const question = questions[i];
         const { type, questionHtml, options, selections, answer,image_url } = question;
 
@@ -216,6 +218,7 @@ module.exports.createTestService = async (testData) => {
           options: optionsResponse,
         });
       }
+    }
 
       sectionsResponse.push({
         ...partResult.rows[0],
