@@ -30,6 +30,15 @@ const countriesRouter = require("./plans/countries/index");
 const multer_new = require("multer");
 const upload = multer_new();
 
+
+//IELTS related APIs
+// Add IELTS users routers
+const ieltsTestCategoriesRouter = require("./ielts_test_categories/index");
+const ieltsTestsRouter = require("./ielts_tests/index");
+const ieltsTestPartsRouter = require("./ielts_test_parts/index");
+const ieltsQuestionsRouter = require("./ielts_questions/index");
+const ieltsOptionsRouter = require("./ielts_options/index"); 
+
 router.post(
   "/login-user",
   [input_validator.loginUserValidate],
@@ -202,6 +211,14 @@ router.post("/user-google-response",[input_validator.userGoogleResponseValidate]
 router.use("/help-center", [checkSession], helpCenterRouter);
 
 router.use("/countries", [checkSession], countriesRouter);
+
+// Add IELTS admin routers
+router.use("/ielts-test-categories", [checkSession], ieltsTestCategoriesRouter);
+router.use("/ielts-tests", [checkSession], ieltsTestsRouter);
+router.use("/ielts-test-parts", [checkSession], ieltsTestPartsRouter);
+router.use("/ielts-questions", [checkSession], ieltsQuestionsRouter);
+router.use("/ielts-options", [checkSession], ieltsOptionsRouter);
+
 
 module.exports = router;
 
