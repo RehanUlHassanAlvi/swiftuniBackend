@@ -252,6 +252,7 @@ module.exports.getAllTestsService = async () => {
         c.category_name,
         t.test_name,
         t.test_type,
+        t.test_kind,
         t.total_time,
         t.audio_url,
         t.created_at,
