@@ -33,11 +33,7 @@ const upload = multer_new();
 
 //IELTS related APIs
 // Add IELTS users routers
-const ieltsTestCategoriesRouter = require("./ielts_test_categories/index");
 const ieltsTestsRouter = require("./ielts_tests/index");
-const ieltsTestPartsRouter = require("./ielts_test_parts/index");
-const ieltsQuestionsRouter = require("./ielts_questions/index");
-const ieltsOptionsRouter = require("./ielts_options/index"); 
 
 router.post(
   "/login-user",
