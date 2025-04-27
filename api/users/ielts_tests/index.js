@@ -6,7 +6,7 @@ const { checkSession } = require("../../../middlewares/checkUserSession");
 
 router.get(
   "/",
-  [checkSession, input_validator.getIELTSTestsForUserValidate],
+  checkSession,
   controller.getTests
 );
 
