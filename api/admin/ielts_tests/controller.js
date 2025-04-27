@@ -2,7 +2,7 @@ const service = require('./service');
 
 module.exports.getTests = async (req, res, next) => {
   try {
-    const result = await service.getTests();
+    const result = await service.getAllTestsService();
     return res.json(result);
   } catch (error) {
     return res.json(error);
