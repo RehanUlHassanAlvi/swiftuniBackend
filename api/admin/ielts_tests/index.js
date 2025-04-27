@@ -10,13 +10,7 @@ const {
 const { checkSession } = require("../../../middlewares/checkAdminSession");
 
 router.get(
-  "/",
-  [
-    checkSession,
-    checkAdminPortalPermission(),
-    checkAdminPermission(),
-    input_validator.getIELTSTestsValidate,
-  ],
+  "/",checkSession,
   controller.getTests
 );
 
