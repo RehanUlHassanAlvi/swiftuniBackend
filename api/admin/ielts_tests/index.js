@@ -8,9 +8,11 @@ const {
   checkAdminPermission,
 } = require("../../../middlewares/validate");
 const { checkSession } = require("../../../middlewares/checkAdminSession");
+const { checkUserSession } = require("../../../middlewares/checkUserSession");
+
 
 router.get(
-  "/",checkSession,
+  "/",checkUserSession,
   controller.getTests
 );
 
