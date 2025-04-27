@@ -212,12 +212,8 @@ router.use("/help-center", [checkSession], helpCenterRouter);
 
 router.use("/countries", [checkSession], countriesRouter);
 
-// Add IELTS admin routers
-router.use("/ielts-test-categories", [checkSession], ieltsTestCategoriesRouter);
+// Add IELTS users routers
 router.use("/ielts-tests", [checkSession], ieltsTestsRouter);
-router.use("/ielts-test-parts", [checkSession], ieltsTestPartsRouter);
-router.use("/ielts-questions", [checkSession], ieltsQuestionsRouter);
-router.use("/ielts-options", [checkSession], ieltsOptionsRouter);
 
 
 module.exports = router;
