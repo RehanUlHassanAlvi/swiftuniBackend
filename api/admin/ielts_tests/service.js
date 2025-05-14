@@ -119,7 +119,7 @@ module.exports.deleteTests = async (values) => {
 
 
 module.exports.createTestService = async (testData) => {
-  const { testName, testType, category, totalTime, audioUrl, sections } = testData;
+  const { testName, testType, category, totalTime, audioUrl, sections,test_kind } = testData;
 
   // Start a transaction to ensure atomicity
   const client = await query("BEGIN");
@@ -143,8 +143,8 @@ module.exports.createTestService = async (testData) => {
 
     // Step 2: Create the test
     const testResult = await query(
-      "SELECT * FROM public.add_ielts_test($1, $2, $3, $4, $5)",
-      [categoryId, testName, testType, totalTime, audioUrl || null]
+      "SELECT * FROM public.add_ielts_test($1, $2, $3, $4, $5,$6)",
+      [categoryId, testName, testType, totalTime, audioUrl || null,test_kind || null]
     );
     const testId = testResult.rows[0].id;
 
