@@ -3565,6 +3565,7 @@ module.exports.addIELTSTestPartValidate = (req, res, next) => {
     }),
     examiner_notes: Joi.string().allow(null).optional(),
     passage_text: Joi.string().allow(null).optional(),
+    passage_html: Joi.string().allow(null).optional(),
     order_id: Joi.number().integer().required().messages({
       "number.base": "Order ID must be a number",
       "any.required": "Order ID is required",

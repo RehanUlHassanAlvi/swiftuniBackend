@@ -39,6 +39,7 @@ module.exports.getTests = async () => {
         p.part_name,
         p.examiner_notes,
         p.passage_text,
+        p.passage_html,
         p.order_id,
         p.created_at,
         p.updated_at
