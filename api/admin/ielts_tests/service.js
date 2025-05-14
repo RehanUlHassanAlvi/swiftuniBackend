@@ -155,7 +155,7 @@ module.exports.createTestService = async (testData) => {
 
       // Create the test part
       const partResult = await query(
-        "SELECT * FROM public.add_ielts_test_part($1, $2, $3, $4, $5, $6)",
+        "SELECT * FROM public.add_ielts_test_part($1, $2, $3, $4,$5, $6)",
         [testId, `Part ${sectionNumber}`, instructions || null, contentHtml || null, sectionNumber, passage_html || null]
       );
       const partId = partResult.rows[0].id;
