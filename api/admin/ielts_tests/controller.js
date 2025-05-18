@@ -92,7 +92,6 @@ module.exports.uploadImage = async (req, res) => {
       Key: `uploads/${fileName}`,
       Body: file.buffer,
       ContentType: file.mimetype,
-      ACL: 'public-read',
     };
 
     await s3Client.send(new PutObjectCommand(params));
