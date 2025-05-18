@@ -16,7 +16,8 @@ module.exports.getTests = async () => {
         t.total_time,
         t.audio_url,
         t.created_at,
-        t.updated_at
+        t.updated_at,
+        t.answer_sheet
       FROM public.ielts_tests t
       LEFT JOIN public.ielts_test_categories c ON t.category_id = c.id
       ORDER BY t.id;

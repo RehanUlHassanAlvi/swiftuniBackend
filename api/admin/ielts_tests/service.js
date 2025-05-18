@@ -119,7 +119,7 @@ module.exports.deleteTests = async (values) => {
 
 
 module.exports.createTestService = async (testData) => {
-  const { testName, testType, category, totalTime, audioUrl, sections,test_kind } = testData;
+  const { testName, testType, category, totalTime, audioUrl, sections,test_kind,answer_sheet } = testData;
 
   // Start a transaction to ensure atomicity
   const client = await query("BEGIN");
@@ -143,8 +143,8 @@ module.exports.createTestService = async (testData) => {
 
     // Step 2: Create the test
     const testResult = await query(
-      "SELECT * FROM public.add_ielts_test($1, $2, $3, $4, $5,$6)",
-      [categoryId, testName, testType, totalTime, audioUrl || null,test_kind || null]
+      "SELECT * FROM public.add_ielts_test($1, $2, $3, $4, $5,$6,$7)",
+      [categoryId, testName, testType, totalTime, audioUrl || null,test_kind || null, answer_sheet || null]
     );
     const testId = testResult.rows[0].id;
 
@@ -256,7 +256,8 @@ module.exports.getAllTestsService = async () => {
         t.total_time,
         t.audio_url,
         t.created_at,
-        t.updated_at
+        t.updated_at,
+        t.answer_sheet
       FROM public.ielts_tests t
       LEFT JOIN public.ielts_test_categories c ON t.category_id = c.id
       ORDER BY t.id;
