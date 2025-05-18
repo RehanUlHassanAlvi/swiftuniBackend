@@ -8,6 +8,8 @@ const {
   checkAdminPermission,
 } = require("../../../middlewares/validate");
 const { checkSession } = require("../../../middlewares/checkAdminSession");
+const multer = require("multer");
+const upload = multer({ storage: multer.memoryStorage() });
 
 router.get(
   "/",
@@ -48,7 +50,12 @@ router.post(
   controller.deleteTests
 );
 
-
+router.post(
+  "/upload-image",
+  checkSession,
+  upload.single("image"),
+  controller.uploadImage
+);
 
 router.post("/create", checkSession,  createTest);
 
