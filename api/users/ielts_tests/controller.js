@@ -8,3 +8,13 @@ module.exports.getTests = async (req, res, next) => {
     return res.json(error);
   }
 };
+
+
+module.exports.saveTestAttempt = async (req, res, next) => {
+  try {
+    const result = await service.saveTestAttempt(req);
+    return res.json(result);
+  } catch (error) {
+    return res.json(error);
+  }
+};

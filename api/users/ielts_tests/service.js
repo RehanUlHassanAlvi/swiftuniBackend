@@ -116,3 +116,66 @@ module.exports.getTests = async () => {
     throw new Error(`Error fetching tests: ${error.message}`);
   }
 };
+
+module.exports.saveTestAttempt = async (userResponse) => {
+    const analytics = {};
+  let totalMarks = 0;
+
+    const res = await query(
+    'SELECT answer_sheet FROM ielts_tests WHERE id = $1',
+    [userResponse.testId]
+  );
+
+
+  if (res.rows.length === 0) {
+    throw new Error("AnswerSheet/Test not found");
+  }
+
+  userResponse.answers.forEach(({ questionId, userAnswer }) => {
+    const correctAnswer = answerSheet[questionId];
+    const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
+    analytics[questionId] = {
+      userAnswer,
+      correctAnswer,
+      isCorrect,
+      score: isCorrect ? 1 : 0
+    };
+    if (isCorrect) totalMarks += 1;
+  });
+
+  const now = new Date();
+
+  const insertQuery = `
+    INSERT INTO ielts_test_attempts (
+      test_id, user_id, start_time, end_time, total_marks_obtained,
+      created_at, updated_at, status, analytics
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+  `;
+
+  const values = [
+    parseInt(userResponse.testId),
+    parseInt(userResponse.userId),
+    now, // start_time
+    now, // end_time
+    totalMarks.toString(), // total_marks_obtained
+    now, // created_at
+    now, // updated_at
+    'completed',
+    JSON.stringify(analytics)
+  ];
+
+  await query(insertQuery, values);
+
+  return {
+    responseCode: 200,
+    message: "Test attempt saved successfully",
+    response: {
+      testId: userResponse.testId,
+      userId: userResponse.userId,
+      totalMarksObtained: totalMarks,
+      analytics
+    }
+  };
+}
+
