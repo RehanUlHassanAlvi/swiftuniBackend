@@ -12,7 +12,7 @@ module.exports.getTests = async (req, res, next) => {
 
 module.exports.saveTestAttempt = async (req, res, next) => {
   try {
-    const result = await service.saveTestAttempt(req);
+    const result = await service.saveTestAttempt(req.body);
     return res.json(result);
   } catch (error) {
     return res.json(error);

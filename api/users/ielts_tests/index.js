@@ -9,5 +9,11 @@ router.get(
   checkSession,
   controller.getTests
 );
+router.post(
+  "/saveTestAttempt",
+   checkSession,
+  controller.saveTestAttempt
+);
+
 
 module.exports = router;

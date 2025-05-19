@@ -118,6 +118,8 @@ module.exports.getTests = async () => {
 };
 
 module.exports.saveTestAttempt = async (userResponse) => {
+
+  console.log("userResponse", userResponse);
     const analytics = {};
   let totalMarks = 0;
 
@@ -125,11 +127,13 @@ module.exports.saveTestAttempt = async (userResponse) => {
     'SELECT answer_sheet FROM ielts_tests WHERE id = $1',
     [userResponse.testId]
   );
-
-
-  if (res.rows.length === 0) {
+ if (res.rows.length === 0) {
     throw new Error("AnswerSheet/Test not found");
   }
+  const answerSheet = res.rows[0].answer_sheet;
+  console.log("answerSheet",answerSheet);
+
+ 
 
   userResponse.answers.forEach(({ questionId, userAnswer }) => {
     const correctAnswer = answerSheet[questionId];
