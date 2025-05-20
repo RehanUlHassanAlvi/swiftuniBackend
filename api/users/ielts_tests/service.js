@@ -164,75 +164,141 @@ function parseMalformedAnswerSheet(str) {
   return result;
 }
 
-module.exports.saveTestAttempt = async (userResponse,userId) => {
-  const analytics = {};
-  let totalMarks = 0;
+module.exports.saveTestAttempt = async (userResponse, userId) => {
+  console.log('Entering saveTestAttempt', { userResponse, userId });
 
-    const res = await query(
-    'SELECT answer_sheet FROM ielts_tests WHERE id = $1',
-    [userResponse.testId]
-  );
- if (res.rows.length === 0) {
-    throw new Error("AnswerSheet/Test not found");
-  }
-
-const answerSheetRaw = res.rows[0].answer_sheet;
-console.log("answerSheetRaw", answerSheetRaw);
-
-// Fix malformed JSON
-const answerSheet = parseMalformedAnswerSheet(answerSheetRaw);
-
-console.log("answerSheet", answerSheet);
-
-console.log("answers", userResponse.answers);
-
-  userResponse.answers.forEach(({ questionId, userAnswer }) => {
-    const correctAnswer = answerSheet[questionId.toString()];
-    console.log("correctAnswer",correctAnswer);
-const isCorrect =
-  userAnswer.toString().trim().toLowerCase() === correctAnswer.toString().trim().toLowerCase();
-    analytics[questionId] = {
-      userAnswer,
-      correctAnswer,
-      isCorrect,
-      score: isCorrect ? 1 : 0
-    };
-    if (isCorrect) totalMarks += 1;
-  });
-
-  const now = new Date();
-
-  const insertQuery = `
-    INSERT INTO ielts_test_attempts (
-      test_id, user_id, start_time, end_time, total_marks_obtained,
-      created_at, updated_at, status, analytics
-    )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-  `;
-
-  const values = [
-    parseInt(userResponse.testId),
-    parseInt(userId),
-    now, // start_time
-    now, // end_time
-    totalMarks.toString(), // total_marks_obtained
-    now, // created_at
-    now, // updated_at
-    'completed',
-    JSON.stringify(analytics)
-  ];
-
-  await query(insertQuery, values);
-
-  return {
-    responseCode: 200,
-    message: "Test attempt saved successfully",
-    response: {
-      testId: userResponse.testId,
-      userId,
-      totalMarksObtained: totalMarks,
-      analytics
+  try {
+    // Validate inputs
+    if (!userResponse || !userResponse.testId || !userResponse.answers || !userId) {
+      console.error('Validation failed: Missing required fields', { userResponse, userId });
+      throw new Error('Missing required fields: testId, answers, or userId');
     }
-  };
-}
 
+    const analytics = {};
+    let totalMarks = 0;
+
+    // Fetch answer sheet from database
+    let answerSheetRaw;
+    try {
+      console.log('Fetching answer sheet for testId:', userResponse.testId);
+      const res = await query(
+        'SELECT answer_sheet FROM ielts_tests WHERE id = $1',
+        [userResponse.testId]
+      );
+
+      if (res.rows.length === 0) {
+        console.error('Test not found for testId:', userResponse.testId);
+        throw new Error('AnswerSheet/Test not found');
+      }
+
+      answerSheetRaw = res.rows[0].answer_sheet;
+      console.log('Answer sheet fetched successfully:', answerSheetRaw);
+    } catch (error) {
+      console.error('Error fetching answer sheet:', error.message, error.stack);
+      throw new Error(`Failed to fetch answer sheet: ${error.message}`);
+    }
+
+    // Parse the answer sheet
+    let answerSheet;
+    try {
+      console.log('Parsing answer sheet:', answerSheetRaw);
+      answerSheet = parseMalformedAnswerSheet(answerSheetRaw);
+      console.log('Answer sheet parsed successfully:', answerSheet);
+    } catch (error) {
+      console.error('Error parsing answer sheet:', error.message, error.stack);
+      throw new Error(`Failed to parse answer sheet: ${error.message}`);
+    }
+
+    // Log user answers
+    console.log('User answers:', userResponse.answers);
+
+    // Evaluate user responses
+    try {
+      userResponse.answers.forEach(({ questionId, userAnswer }) => {
+        const correctAnswer = answerSheet[questionId.toString()];
+        console.log(`Evaluating question ${questionId}:`, { userAnswer, correctAnswer });
+
+        if (correctAnswer === undefined) {
+          console.warn(`No correct answer found for questionId ${questionId}`);
+          analytics[questionId] = {
+            userAnswer,
+            correctAnswer: 'N/A',
+            isCorrect: false,
+            score: 0
+          };
+          return;
+        }
+
+        const isCorrect =
+          userAnswer.toString().trim().toLowerCase() === correctAnswer.toString().trim().toLowerCase();
+
+        analytics[questionId] = {
+          userAnswer,
+          correctAnswer,
+          isCorrect,
+          score: isCorrect ? 1 : 0
+        };
+
+        if (isCorrect) totalMarks += 1;
+      });
+      console.log('Evaluation completed:', { totalMarks, analytics });
+    } catch (error) {
+      console.error('Error evaluating answers:', error.message, error.stack);
+      throw new Error(`Failed to evaluate answers: ${error.message}`);
+    }
+
+    // Insert test attempt into database
+    const now = new Date();
+    const insertQuery = `
+      INSERT INTO ielts_test_attempts (
+        test_id, user_id, start_time, end_time, total_marks_obtained,
+        created_at, updated_at, status, analytics
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    `;
+
+    const values = [
+      parseInt(userResponse.testId),
+      parseInt(userId),
+      now, // start_time
+      now, // end_time
+      totalMarks.toString(), // total_marks_obtained
+      now, // created_at
+      now, // updated_at
+      'completed',
+      JSON.stringify(analytics)
+    ];
+
+    try {
+      console.log('Inserting test attempt into database:', values);
+      await query(insertQuery, values);
+      console.log('Test attempt saved successfully');
+    } catch (error) {
+      console.error('Error saving test attempt to database:', error.message, error.stack);
+      throw new Error(`Failed to save test attempt: ${error.message}`);
+    }
+
+    // Return success response
+    const response = {
+      responseCode: 200,
+      message: 'Test attempt saved successfully',
+      response: {
+        testId: userResponse.testId,
+        userId,
+        totalMarksObtained: totalMarks,
+        analytics
+      }
+    };
+
+    console.log('Exiting saveTestAttempt with success:', response);
+    return response;
+
+  } catch (error) {
+    console.error('Unexpected error in saveTestAttempt:', error.message, error.stack);
+    throw {
+      responseCode: error.message.includes('not found') ? 404 : 500,
+      message: error.message || 'Internal server error',
+      error: error.message
+    };
+  }
+};
