@@ -117,10 +117,55 @@ module.exports.getTests = async () => {
   }
 };
 
-module.exports.saveTestAttempt = async (userResponse) => {
+function parseMalformedAnswerSheet(str) {
+  if (!str.startsWith("{") || !str.endsWith("}")) {
+    throw new Error("Invalid input format");
+  }
 
-  console.log("userResponse", userResponse);
-    const analytics = {};
+  const result = {};
+  // Remove the outer braces
+  const content = str.slice(1, -1);
+
+  // Custom parser: split by commas not inside text values
+  let current = "";
+  let entries = [];
+  let insideValue = false;
+
+  for (let i = 0; i < content.length; i++) {
+    const char = content[i];
+    if (char === "," && !insideValue) {
+      entries.push(current);
+      current = "";
+    } else {
+      if (char === ":") {
+        insideValue = true;
+      }
+      if (insideValue && i < content.length - 1 && content[i + 1] === ",") {
+        insideValue = false;
+      }
+      current += char;
+    }
+  }
+  if (current) entries.push(current);
+
+  // Now process each entry
+  for (let entry of entries) {
+    const colonIndex = entry.indexOf(":");
+    if (colonIndex === -1) continue;
+    const key = entry.slice(0, colonIndex).trim();
+    const value = entry.slice(colonIndex + 1).trim();
+
+    // Save as string or number
+    const parsedKey = key;
+    const parsedValue = isNaN(value) ? value : Number(value);
+    result[parsedKey] = parsedValue;
+  }
+
+  return result;
+}
+
+module.exports.saveTestAttempt = async (userResponse) => {
+  const analytics = {};
   let totalMarks = 0;
 
     const res = await query(
@@ -130,14 +175,22 @@ module.exports.saveTestAttempt = async (userResponse) => {
  if (res.rows.length === 0) {
     throw new Error("AnswerSheet/Test not found");
   }
-  const answerSheet = res.rows[0].answer_sheet;
-  console.log("answerSheet",answerSheet);
 
- 
+const answerSheetRaw = res.rows[0].answer_sheet;
+console.log("answerSheetRaw", answerSheetRaw);
+
+// Fix malformed JSON
+const answerSheet = parseMalformedAnswerSheet(answerSheetRaw);
+
+console.log("answerSheet", answerSheet);
+
+console.log("answers", userResponse.answers);
 
   userResponse.answers.forEach(({ questionId, userAnswer }) => {
-    const correctAnswer = answerSheet[questionId];
-    const isCorrect = userAnswer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
+    const correctAnswer = answerSheet[questionId.toString()];
+    console.log("correctAnswer",correctAnswer);
+const isCorrect =
+  userAnswer.toString().trim().toLowerCase() === correctAnswer.toString().trim().toLowerCase();
     analytics[questionId] = {
       userAnswer,
       correctAnswer,

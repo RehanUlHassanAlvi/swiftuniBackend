@@ -11,7 +11,7 @@ router.get(
 );
 router.post(
   "/saveTestAttempt",
-   checkSession,
+  //  checkSession,
   controller.saveTestAttempt
 );
 
