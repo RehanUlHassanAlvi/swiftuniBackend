@@ -164,7 +164,7 @@ function parseMalformedAnswerSheet(str) {
   return result;
 }
 
-module.exports.saveTestAttempt = async (userResponse) => {
+module.exports.saveTestAttempt = async (userResponse,userId) => {
   const analytics = {};
   let totalMarks = 0;
 
@@ -212,7 +212,7 @@ const isCorrect =
 
   const values = [
     parseInt(userResponse.testId),
-    parseInt(userResponse.userId),
+    parseInt(userId),
     now, // start_time
     now, // end_time
     totalMarks.toString(), // total_marks_obtained
@@ -229,7 +229,7 @@ const isCorrect =
     message: "Test attempt saved successfully",
     response: {
       testId: userResponse.testId,
-      userId: userResponse.userId,
+      userId,
       totalMarksObtained: totalMarks,
       analytics
     }

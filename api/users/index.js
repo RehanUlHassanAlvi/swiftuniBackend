@@ -209,7 +209,7 @@ router.use("/help-center", [checkSession], helpCenterRouter);
 router.use("/countries", [checkSession], countriesRouter);
 
 // Add IELTS users routers
-router.use("/ielts-tests", ieltsTestsRouter);
+router.use("/ielts-tests", checkSession, ieltsTestsRouter);
 
 
 module.exports = router;
