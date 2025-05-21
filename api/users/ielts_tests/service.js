@@ -247,6 +247,27 @@ module.exports.saveTestAttempt = async (userResponse, userId) => {
       throw new Error(`Failed to evaluate answers: ${error.message}`);
     }
 
+    let bandScore;
+
+    if (totalMarks >= 39) bandScore = 9.0;
+    else if (totalMarks >= 37) bandScore = 8.5;
+    else if (totalMarks >= 35) bandScore = 8.0;
+    else if (totalMarks >= 33) bandScore = 7.5;
+    else if (totalMarks >= 30) bandScore = 7.0;
+    else if (totalMarks >= 27) bandScore = 6.5;
+    else if (totalMarks >= 23) bandScore = 6.0;
+    else if (totalMarks >= 19) bandScore = 5.5;
+    else if (totalMarks >= 15) bandScore = 5.0;
+    else if (totalMarks >= 13) bandScore = 4.5;
+    else if (totalMarks >= 10) bandScore = 4.0;
+    else if (totalMarks >= 7) bandScore = 3.5;
+    else if (totalMarks >= 5) bandScore = 3.0;
+    else if (totalMarks >= 3) bandScore = 2.5;
+    else if (totalMarks >= 1) bandScore = 2.0;
+    else bandScore = 1.0;
+
+    console.log('Calculated Band Score:', bandScore);
+
     // Insert test attempt into database
     const now = new Date();
     const insertQuery = `
@@ -262,7 +283,7 @@ module.exports.saveTestAttempt = async (userResponse, userId) => {
       parseInt(userId),
       now, // start_time
       now, // end_time
-      totalMarks.toString(), // total_marks_obtained
+      bandScore.toString(), // total_marks_obtained
       now, // created_at
       now, // updated_at
       'completed',
