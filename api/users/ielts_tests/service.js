@@ -306,7 +306,7 @@ module.exports.saveTestAttempt = async (userResponse, userId) => {
       response: {
         testId: userResponse.testId,
         userId,
-        totalMarksObtained: totalMarks,
+        totalMarksObtained: bandScore,
         analytics
       }
     };
